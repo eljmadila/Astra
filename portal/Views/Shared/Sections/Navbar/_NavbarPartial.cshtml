@@ -1,0 +1,140 @@
+@* ! Brand demo (display only for navbar-full and hide on below xl) *@
+@if (ViewData["navbarFull"] != null)
+{
+  <div class="navbar-brand app-brand demo d-none d-xl-flex py-0 me-4">
+    <a asp-controller="Dashboards" asp-action="Index" class="app-brand-link gap-2">
+      <span class="app-brand-logo demo">
+        @await Html.PartialAsync("../_Partials/_Macros")
+      </span>
+      <span class="app-brand-text demo menu-text fw-bold text-heading">@TempData.Peek("appName")</span>
+    </a>
+
+    @* ! Display menu close icon only for horizontal-menu with navbar-full *@
+    @if (Convert.ToBoolean(@TempData.Peek("menuHorizontal")).ToString() == "True")
+    {
+      <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-xl-none">
+        <i class="icon-base bx bx-chevron-left d-flex align-items-center justify-content-center"></i>
+      </a>
+    }
+  </div>
+}
+
+@* ! Menu toggle button for mobile *@
+@if (ViewData["navbarHideToggle"] == null)
+{
+  <div class="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 d-xl-none">
+    <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
+      <i class="icon-base bx bx-menu bx-md"></i>
+    </a>
+  </div>
+}
+
+<div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
+  <!-- Global Search Bar -->
+  <div class="navbar-nav align-items-center me-auto">
+    <form asp-controller="Projects" asp-action="Index" method="get" class="nav-item d-flex align-items-center m-0">
+      <span class="w-px-22 h-px-22 text-muted"><i class="icon-base bx bx-search icon-md"></i></span>
+      <input type="text" name="search" class="form-control border-0 shadow-none ps-2 d-md-block d-none" placeholder="Search projects, clients, staff..." aria-label="Search..." />
+    </form>
+  </div>
+  <!-- /Global Search Bar -->
+
+  <ul class="navbar-nav flex-row align-items-center ms-md-auto gap-2">
+    <!-- In-App Notification Bell -->
+    <li class="nav-item dropdown dropdown-notifications navbar-dropdown me-3">
+      <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="icon-base bx bx-bell bx-sm"></i>
+        <span class="badge rounded-pill bg-danger badge-dot badge-notifications" id="notificationBadge"></span>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end py-0" style="min-width: 320px;">
+        <li class="dropdown-menu-header border-bottom">
+          <div class="dropdown-header d-flex align-items-center py-3">
+            <h6 class="mb-0 me-auto">Notifications</h6>
+            <a href="javascript:void(0)" class="dropdown-notifications-all text-body" data-bs-toggle="tooltip" data-bs-placement="top" title="Mark all as read">
+              <i class="bx bx-envelope-open fs-5"></i>
+            </a>
+          </div>
+        </li>
+        <li class="dropdown-notifications-list scrollable-container">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item list-group-item-action dropdown-notifications-item">
+              <div class="d-flex">
+                <div class="flex-shrink-0 me-3">
+                  <div class="avatar avatar-sm">
+                    <span class="avatar-initial rounded-circle bg-label-primary"><i class="bx bx-transfer-alt"></i></span>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <h6 class="small mb-1">Reassignment Notice</h6>
+                  <small class="mb-1 d-block text-body">You have been assigned to Project Titan.</small>
+                  <small class="text-muted">Just now</small>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </li>
+        <li class="border-top">
+          <div class="d-grid p-2">
+            <a class="btn btn-primary btn-sm d-flex justify-content-center align-items-center" asp-controller="Notifications" asp-action="Index">
+              View all notifications
+            </a>
+          </div>
+        </li>
+      </ul>
+    </li>
+    <!-- /In-App Notification Bell -->
+
+    <!-- User Profile Dropdown -->
+    <li class="nav-item navbar-dropdown dropdown-user dropdown">
+      <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
+        <div class="avatar avatar-online">
+          <img src="~/img/avatars/1.png" alt="Avatar" class="w-px-40 h-auto rounded-circle" />
+        </div>
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <div class="dropdown-item">
+            <div class="d-flex">
+              <div class="flex-shrink-0 me-3">
+                <div class="avatar avatar-online">
+                  <img src="~/img/avatars/1.png" alt="Avatar" class="w-px-40 h-auto rounded-circle" />
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="mb-0">@(User.Identity?.Name ?? "Demo User")</h6>
+                @{
+                  string roleName = "Employee";
+                  if (User.IsInRole("Admin")) roleName = "Admin";
+                  else if (User.IsInRole("Manager")) roleName = "Manager";
+                  else if (User.IsInRole("Viewer")) roleName = "Viewer";
+                }
+                <small class="badge bg-label-primary">@roleName</small>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li><div class="dropdown-divider my-1"></div></li>
+        <li>
+          <a class="dropdown-item" asp-controller="Employees" asp-action="Profile" asp-route-id="@(User.FindFirst("sub")?.Value ?? "0")">
+            <i class="icon-base bx bx-user icon-md me-3"></i><span>My Profile</span>
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" asp-controller="Auth" asp-action="ChangePassword">
+            <i class="icon-base bx bx-key icon-md me-3"></i><span>Change Password</span>
+          </a>
+        </li>
+        <li><div class="dropdown-divider my-1"></div></li>
+        <li>
+          <form asp-controller="Auth" asp-action="Logout" method="post" id="logoutForm" class="d-block w-100">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
+              <i class="icon-base bx bx-power-off icon-md me-3"></i><span>Log Out</span>
+            </button>
+          </form>
+        </li>
+      </ul>
+    </li>
+    <!--/ User Profile Dropdown -->
+  </ul>
+</div>

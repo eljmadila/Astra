@@ -1,0 +1,20 @@
+@{
+  TempData.Keep();
+  ViewData["containerNav"] = (ViewData["containerNav"] ??= "container-fluid");
+}
+
+<!-- Footer -->
+<footer class="content-footer footer bg-footer-theme">
+  <div class="@ViewData["containerNav"]">
+    <div class="footer-container d-flex align-items-center justify-content-between py-3 flex-md-row flex-column">
+      <div class="mb-2 mb-md-0 text-muted small">
+        &#169; @DateTime.UtcNow.Year <span class="fw-semibold">@TempData.Peek("appName")</span> — Internal Office Management System
+      </div>
+      <div class="d-none d-lg-inline-block small">
+        <a asp-controller="Home" asp-action="Help" class="footer-link me-4 text-muted">User Guide</a>
+        <span class="badge bg-label-primary">v1.0.0-rc</span>
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- / Footer -->

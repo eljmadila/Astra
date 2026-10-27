@@ -1,0 +1,34 @@
+## Visual Studio / Build Output
+.vs/
+.vscode/
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+**/out/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.sln.docstates
+
+## Node & Yarn
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+## Secrets & Local Configurations
+**/appsettings.Production.json
+**/*.local.json
+.env
+.env.*.local
+*.pfx
+*.key
+
+## OS Generated
+Thumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*

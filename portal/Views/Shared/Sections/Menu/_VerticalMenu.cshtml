@@ -1,0 +1,191 @@
+@{
+  TempData.Keep();
+  string? currentPage = ViewContext.HttpContext.Request.Path.Value ?? "/";
+  bool isAuthenticated = User.Identity?.IsAuthenticated == true;
+  bool isAdmin = User.IsInRole("Admin");
+  bool isManager = User.IsInRole("Manager") || isAdmin;
+  bool isViewer = User.IsInRole("Viewer") || isManager;
+  bool isEmployeeOnly = isAuthenticated && !isManager && !User.IsInRole("Viewer");
+}
+
+<!-- Vertical Menu -->
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+  <!-- Brand & Logo -->
+  <div class='app-brand demo @((ViewData["navbarFull"] != null && Convert.ToBoolean(ViewData["navbarFull"])) ? "d-xl-none" : "")'>
+    <a asp-controller="Dashboards" asp-action="Index" class="app-brand-link">
+      <span class="app-brand-logo demo">
+        @await Html.PartialAsync("../_Partials/_Macros")
+      </span>
+      <span class="app-brand-text demo menu-text fw-bold ms-2">@TempData.Peek("appName")</span>
+    </a>
+
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+      <i class="icon-base bx bx-chevron-left d-block d-xl-none align-middle"></i>
+    </a>
+  </div>
+
+  <div class="menu-divider mt-0"></div>
+  <div class="menu-inner-shadow"></div>
+
+  <ul class="menu-inner py-1">
+    <!-- DASHBOARDS -->
+    <li class="menu-header small text-uppercase">
+      <span class="menu-header-text">Overview</span>
+    </li>
+    
+    <li class='menu-item@(currentPage == "/" || currentPage.StartsWith("/Dashboards") ? " active" : "")'>
+      <a asp-controller="Dashboards" asp-action="Index" class="menu-link">
+        <i class="menu-icon icon-base bx bx-home-smile"></i>
+        <div class="text-truncate">Dashboard</div>
+      </a>
+    </li>
+
+    @if (isEmployeeOnly)
+    {
+      <li class='menu-item@(currentPage.StartsWith("/MyTasks") ? " active" : "")'>
+        <a asp-controller="Tasks" asp-action="MyTasks" class="menu-link">
+          <i class="menu-icon icon-base bx bx-check-square"></i>
+          <div class="text-truncate">My Tasks</div>
+        </a>
+      </li>
+    }
+
+    <!-- PROJECTS & PORTFOLIO -->
+    <li class="menu-header small text-uppercase">
+      <span class="menu-header-text">Projects & Delivery</span>
+    </li>
+
+    <li class='menu-item@(currentPage.StartsWith("/Projects") ? " active open" : "")'>
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon icon-base bx bx-briefcase-alt-2"></i>
+        <div class="text-truncate">Projects</div>
+      </a>
+      <ul class="menu-sub">
+        <li class='menu-item@(currentPage == "/Projects" || currentPage == "/Projects/Index" ? " active" : "")'>
+          <a asp-controller="Projects" asp-action="Index" class="menu-link">
+            <div class="text-truncate">All Projects</div>
+          </a>
+        </li>
+        @if (isManager)
+        {
+          <li class='menu-item@(currentPage == "/Projects/Create" ? " active" : "")'>
+            <a asp-controller="Projects" asp-action="Create" class="menu-link">
+              <div class="text-truncate">New Project</div>
+            </a>
+          </li>
+        }
+      </ul>
+    </li>
+
+    <li class='menu-item@(currentPage.StartsWith("/Clients") ? " active open" : "")'>
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon icon-base bx bx-buildings"></i>
+        <div class="text-truncate">Clients</div>
+      </a>
+      <ul class="menu-sub">
+        <li class='menu-item@(currentPage == "/Clients" || currentPage == "/Clients/Index" ? " active" : "")'>
+          <a asp-controller="Clients" asp-action="Index" class="menu-link">
+            <div class="text-truncate">Client Directory</div>
+          </a>
+        </li>
+        @if (isManager)
+        {
+          <li class='menu-item@(currentPage == "/Clients/Create" ? " active" : "")'>
+            <a asp-controller="Clients" asp-action="Create" class="menu-link">
+              <div class="text-truncate">Add Client</div>
+            </a>
+          </li>
+        }
+      </ul>
+    </li>
+
+    <!-- TEAM & WORKLOAD -->
+    <li class="menu-header small text-uppercase">
+      <span class="menu-header-text">Team & Staffing</span>
+    </li>
+
+    @if (isViewer || !isAuthenticated)
+    {
+      <li class='menu-item@(currentPage.StartsWith("/Workload") ? " active" : "")'>
+        <a asp-controller="Workload" asp-action="Index" class="menu-link">
+          <i class="menu-icon icon-base bx bx-chart"></i>
+          <div class="text-truncate">Workload View</div>
+        </a>
+      </li>
+    }
+
+    <li class='menu-item@(currentPage.StartsWith("/Employees") ? " active" : "")'>
+      <a asp-controller="Employees" asp-action="Index" class="menu-link">
+        <i class="menu-icon icon-base bx bx-user-pin"></i>
+        <div class="text-truncate">Staff Directory</div>
+      </a>
+    </li>
+
+    @if (isManager || !isAuthenticated)
+    {
+      <li class='menu-item@(currentPage.StartsWith("/Reassignments") ? " active open" : "")'>
+        <a href="javascript:void(0);" class="menu-link menu-toggle">
+          <i class="menu-icon icon-base bx bx-transfer-alt"></i>
+          <div class="text-truncate">Reassignments</div>
+        </a>
+        <ul class="menu-sub">
+          <li class='menu-item@(currentPage == "/Reassignments/Wizard" || currentPage == "/Reassignments/Create" ? " active" : "")'>
+            <a asp-controller="Reassignments" asp-action="Wizard" class="menu-link">
+              <div class="text-truncate">Reassign Employee</div>
+            </a>
+          </li>
+          <li class='menu-item@(currentPage == "/Reassignments" || currentPage == "/Reassignments/Index" ? " active" : "")'>
+            <a asp-controller="Reassignments" asp-action="Index" class="menu-link">
+              <div class="text-truncate">Transfer History</div>
+            </a>
+          </li>
+        </ul>
+      </li>
+    }
+
+    <!-- REPORTS -->
+    @if (isViewer || !isAuthenticated)
+    {
+      <li class="menu-header small text-uppercase">
+        <span class="menu-header-text">Analytics</span>
+      </li>
+
+      <li class='menu-item@(currentPage.StartsWith("/Reports") ? " active" : "")'>
+        <a asp-controller="Reports" asp-action="Index" class="menu-link">
+          <i class="menu-icon icon-base bx bx-file-blank"></i>
+          <div class="text-truncate">Reports Hub</div>
+        </a>
+      </li>
+    }
+
+    <!-- SYSTEM ADMINISTRATION -->
+    @if (isAdmin || !isAuthenticated)
+    {
+      <li class="menu-header small text-uppercase">
+        <span class="menu-header-text">Administration</span>
+      </li>
+
+      <li class='menu-item@(currentPage.StartsWith("/Users") ? " active" : "")'>
+        <a asp-controller="Users" asp-action="Index" class="menu-link">
+          <i class="menu-icon icon-base bx bx-user-check"></i>
+          <div class="text-truncate">User Management</div>
+        </a>
+      </li>
+
+      <li class='menu-item@(currentPage.StartsWith("/ProjectRoles") ? " active" : "")'>
+        <a asp-controller="ProjectRoles" asp-action="Index" class="menu-link">
+          <i class="menu-icon icon-base bx bx-badge-check"></i>
+          <div class="text-truncate">Project Roles</div>
+        </a>
+      </li>
+
+      <li class='menu-item@(currentPage.StartsWith("/AuditLogs") ? " active" : "")'>
+        <a asp-controller="AuditLogs" asp-action="Index" class="menu-link">
+          <i class="menu-icon icon-base bx bx-shield-quarter"></i>
+          <div class="text-truncate">Audit Trail</div>
+        </a>
+      </li>
+    }
+  </ul>
+</aside>
+<!-- / Vertical Menu -->
