@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: astra-sqlserver
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-Astra_Strong_Pass_2026!}
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: astra-web
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=AstraDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Astra_Strong_Pass_2026!};TrustServerCertificate=True;MultipleActiveResultSets=true
+      - Astra__Admin__Email=${Astra__Admin__Email:-admin@astra.internal}
+      - Astra__Admin__Password=${Astra__Admin__Password:-Astra_Admin_Init_2026!}
+      - Astra__Admin__Name=${Astra__Admin__Name:-System Administrator}
+      - Astra__Admin__Department=${Astra__Admin__Department:-Executive Governance}
+    ports:
+      - "8080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+volumes:
+  mssql-data:

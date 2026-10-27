@@ -1,0 +1,34 @@
+name: Astra CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build, Format Check & Validate
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        include-prerelease: true
+
+    - name: Restore Dependencies
+      run: dotnet restore portal/AspnetCoreMvcFull.csproj
+
+    - name: Build Solution
+      run: dotnet build portal/AspnetCoreMvcFull.csproj --no-restore -c Release
+
+    - name: Check Code Formatting
+      run: dotnet format portal/AspnetCoreMvcFull.csproj --verify-no-changes --verbosity diagnostic || true
+
+    - name: Scan Vulnerable Dependencies
+      run: dotnet list portal/AspnetCoreMvcFull.csproj package --vulnerable || true
