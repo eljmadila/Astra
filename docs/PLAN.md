@@ -26,49 +26,99 @@
 
 ### Sub-Phase 1.1: Tooling & Solution Scaffolding
 - [x] Git repository initialized, `.gitignore`, `.github/` workflows configured.
-- [ ] Root `.editorconfig` enforcing C# naming conventions, nullability, and analyzer warnings as errors.
-- [ ] Multi-project solution configuration (`Astra.sln` with `Portal.Domain`, `Portal.Application`, `Portal.Infrastructure`, `Portal.Web`).
-- [ ] Docker containerization: `Dockerfile` and `docker-compose.yml` (App + SQL Server).
-- [ ] Environment configuration template: `.env.example`.
-- [ ] Documentation foundation: `docs/PLAN.md`, `docs/DECISIONS.md`, `docs/SECURITY.md`.
+- [x] Root `.editorconfig` enforcing C# naming conventions, nullability, and analyzer warnings as errors.
+- [x] Multi-project solution configuration (`Astra.sln` with `Portal.Domain`, `Portal.Application`, `Portal.Infrastructure`, `Portal.Web`).
+- [x] Docker containerization: `Dockerfile` and `docker-compose.yml` (App + SQL Server).
+- [x] Environment configuration template: `.env.example`.
+- [x] Documentation foundation: `docs/PLAN.md`, `docs/DECISIONS.md`, `docs/SECURITY.md`.
 
 ### Sub-Phase 1.2: Database & Domain Layer
-- [ ] `Portal.Domain`: Core entity models (`ApplicationUser`, `AuditLog`, `Notification`, `EmailOutboxItem`).
-- [ ] `Portal.Infrastructure`: `ApplicationDbContext` with ASP.NET Core Identity integration.
-- [ ] EF Core code-first migration for baseline schema.
-- [ ] Seed four roles: `Admin`, `Manager`, `Employee`, `Viewer`.
-- [ ] Seed initial `Admin` account securely from environment variables.
-- [ ] Least-privilege database trigger/permissions for `audit_logs` (INSERT/SELECT only).
+- [x] `Portal.Domain`: Core entity models (`ApplicationUser`, `AuditLog`, `Notification`, `EmailOutboxItem`).
+- [x] `Portal.Infrastructure`: `ApplicationDbContext` with ASP.NET Core Identity integration.
+- [x] EF Core code-first migration for baseline schema.
+- [x] Seed four roles: `Admin`, `Manager`, `Employee`, `Viewer`.
+- [x] Seed initial `Admin` account securely from environment variables.
+- [x] Least-privilege database trigger/permissions for `audit_logs` (INSERT/SELECT only).
 
 ### Sub-Phase 1.3: Authentication & Security Engine
-- [ ] Cookie authentication with secure flags (`HttpOnly`, `SameSite=Lax/Strict`, sliding expiration).
-- [ ] Account lockout after 5 consecutive failed attempts (15-minute duration).
-- [ ] Secure password policy (minimum 12 characters, complex character rules).
-- [ ] Forced password change on initial login for seeded or newly created users.
-- [ ] Generic authentication error messages to prevent user enumeration.
+- [x] Cookie authentication with secure flags (`HttpOnly`, `SameSite=Lax/Strict`, sliding expiration).
+- [x] Account lockout after 5 consecutive failed attempts (15-minute duration).
+- [x] Secure password policy (minimum 12 characters, complex character rules).
+- [x] Forced password change on initial login for seeded or newly created accounts.
+- [x] Generic authentication error messages to prevent user enumeration.
 - [ ] Rate limiting on `/Auth/Login` and `/Auth/ForgotPassword`.
-- [ ] Anti-forgery validation (`AutoValidateAntiforgeryToken`) on all mutating endpoints.
-- [ ] Security headers middleware (HSTS, CSP, X-Frame-Options, X-Content-Type-Options).
+- [x] Anti-forgery validation (`AutoValidateAntiforgeryToken`) on all mutating endpoints.
+- [x] Security headers middleware (HSTS, CSP, X-Frame-Options, X-Content-Type-Options).
 
 ### Sub-Phase 1.4: Authorization Pipeline
-- [ ] Deny-by-default `FallbackPolicy` requiring authenticated identity for all non-public endpoints.
-- [ ] Role-based authorization policies (`RequireAdminRole`, `RequireManagerRole`, etc.).
-- [ ] Instant security stamp validation (rejects sessions immediately if a user is deactivated or role changed).
+- [x] Deny-by-default `FallbackPolicy` requiring authenticated identity for all non-public endpoints.
+- [x] Role-based authorization policies (`RequireAdminRole`, `RequireManagerRole`, etc.).
+- [x] Instant security stamp validation (rejects sessions immediately if a user is deactivated or role changed).
 
 ### Sub-Phase 1.5: User Management (Admin Only)
-- [ ] Paginated user list with real-time search and role/activity filtering.
-- [ ] Create user modal/page with role assignment and set-password email dispatch.
-- [ ] Edit user details and role mutation.
-- [ ] Deactivate and reactivate users (soft deactivation; block deactivating the last active Admin).
-- [ ] Deactivated user session termination.
+- [x] Paginated user list with real-time search and role/activity filtering.
+- [x] Create user modal/page with role assignment and set-password email dispatch.
+- [x] Edit user details and role mutation.
+- [x] Deactivate and reactivate users (soft deactivation; block deactivating the last active Admin).
+- [x] Deactivated user session termination.
 
 ### Sub-Phase 1.6: Centralized Audit Logging
-- [ ] EF Core `SaveChangesInterceptor` automatically recording entity creation, updates, and soft deletes into `audit_logs`.
-- [ ] Structured before/after state diffs (JSON with sensitive credentials redacted).
-- [ ] Dedicated audit logging for security events (login success, login failure, lockout, password reset).
+- [x] EF Core `SaveChangesInterceptor` automatically recording entity creation, updates, and soft deletes into `audit_logs`.
+- [x] Structured before/after state diffs (JSON with sensitive credentials redacted).
+- [x] Dedicated audit logging for security events (login success, login failure, lockout, password reset).
 
 ### Sub-Phase 1.7: Testing & Exit Gate Verification
-- [ ] Unit tests for password validation, lockout rules, and model invariants.
-- [ ] Integration tests verifying login, lockout, user deactivation session rejection, and role-based route matrix.
-- [ ] Automated verification of CSRF protection on POST routes.
-- [ ] Clean compilation, analyzer validation, and Phase 1 Report generation.
+- [x] Unit tests for password validation, lockout rules, and model invariants.
+- [x] Integration tests verifying login, lockout, user deactivation session rejection, and role-based route matrix.
+- [x] Automated verification of CSRF protection on POST routes.
+- [x] Clean compilation, analyzer validation, and Phase 1 Report generation.
+
+---
+
+## 3. Week 2 Detailed Task Breakdown (Clients and Projects)
+
+### Sub-Phase 2.1: Database & Entities
+- [x] Entity Framework Core migration `AddClientsAndProjects` for `clients`, `projects`, `project_clients`, and `project_roles`.
+- [x] Project CHECK constraints: planned end >= start date, actual end >= start date, progress percent between 0 and 100.
+- [x] Unique indexes: `projects.code` (unique), `clients.name` (case-insensitive unique), `project_roles.name` (unique).
+- [x] `RowVersion` concurrency tokens (`rowversion`/timestamp) on clients and projects.
+- [x] Multi-column and foreign key performance indexes: `projects(status, is_archived)`, `projects(lead_id)`, `projects(planned_end_date)`, `clients(is_active)`.
+- [x] Restrictive delete behaviors (`DeleteBehavior.Restrict`) on all project and client foreign keys to prevent cascading deletions.
+
+### Sub-Phase 2.2: Client Management
+- [x] Client directory listing with real-time search (name, contact, email, phone), sorting, pagination, and active/inactive status filtering.
+- [x] Create and edit client workflows with case-insensitive duplicate name detection and validation messages.
+- [x] Deactivate-not-delete policy: clients linked to active or historical projects are deactivated rather than deleted to preserve audit trails.
+- [x] Client details page presenting stakeholder cards, contact information, notes, and a portfolio of all linked projects.
+- [x] Permissions: Admin and Manager have create/edit/toggle access; Viewer has read-only access; Employee has no client access.
+
+### Sub-Phase 2.3: Project Management & Governance
+- [x] Project creation with code auto-suggestion (`PRJ-YYYY-###`), title, scope, multi-client picker, lead assignment, milestone dates, status, and priority.
+- [x] Code security: auto-suggested code is read-only for Managers; editable only by System Administrators.
+- [x] Lead eligibility validation: assigned lead must be an active user in the Manager or Admin role.
+- [x] Ownership governance: creating Manager is default lead/owner; Managers may edit/archive only projects they lead; Admins may edit/archive all.
+- [x] Milestone validation: planned end >= start date; actual end required for Completed/Cancelled statuses; Completed status auto-prompts 100% progress.
+- [x] Soft archive & restore workflows with confirmation dialogs; archived projects hidden by default from directory and workload calculations.
+- [x] Status reopening rule: reopening a Completed project clears the actual end date and logs the state transition in the audit trail.
+- [x] Friendly optimistic concurrency conflict resolution page (`ConcurrencyConflict.cshtml`) displaying side-by-side comparison with zero data loss.
+
+### Sub-Phase 2.4: Project Directory & Search
+- [x] High-performance server-side search across code, title, and description.
+- [x] Multi-faceted filtering: status, client, lead, priority, date range, and archive state.
+- [x] Column sorting and server-side pagination with complete URL query persistence for bookmarking.
+- [x] Derived Overdue badge calculation: dynamically computed in memory for non-completed projects past planned end date.
+- [x] Resource-based query scoping (`IProjectScopingService`): Employees see only assigned projects (returning 404 for unassigned projects to prevent IDOR).
+
+### Sub-Phase 2.5: Admin Project Roles Lookup
+- [x] Admin screen (`/ProjectRoles`) to manage project roles: add, rename, and toggle active/deactivated.
+- [x] Pre-seeded baseline roles: Lead, Developer, Analyst, Designer, Tester, Support, Other.
+
+### Sub-Phase 2.6: Testing & Quality Exit Gate
+- [x] xUnit automated test project `tests/Astra.Tests` integrated into solution with 20 passing unit/integration tests.
+- [x] Unit tests for date rules, completion invariants, lead eligibility, and code sequence incrementation.
+- [x] Authorization matrix tests (Admin, Lead Manager, Non-Lead Manager, Employee, Viewer).
+- [x] IDOR prevention tests verifying 404 responses for unauthorized resource access.
+- [x] Concurrency tests proving stale submission detection.
+- [x] Performance validation proving list queries across 1,000+ seeded projects execute well under the 500ms budget.
+- [x] Phase 2 certification report generated.
+

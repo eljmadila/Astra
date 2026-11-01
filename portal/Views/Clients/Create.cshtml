@@ -1,0 +1,103 @@
+@model AspnetCoreMvcFull.ViewModels.Clients.ClientFormViewModel
+@{
+  ViewData["Title"] = "Add New Client — Astra";
+}
+
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-md-10 col-12">
+    <!-- Breadcrumb & Header -->
+    <div class="mb-4">
+      <h4 class="fw-bold mb-1">
+        <a asp-action="Index" class="text-muted fw-light">Client Directory</a> / Add Client
+      </h4>
+      <p class="text-muted mb-0 small">Register a new client entity to associate with projects and governance portfolios.</p>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4">
+        <form asp-action="Create" method="post">
+          @Html.AntiForgeryToken()
+
+          @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+          {
+            <div class="alert alert-danger mb-4">
+              <div asp-validation-summary="ModelOnly" class="mb-0"></div>
+            </div>
+          }
+
+          <div class="row g-3">
+            <!-- Client Name -->
+            <div class="col-12">
+              <label asp-for="Name" class="form-label fw-semibold">Client / Company Name <span class="text-danger">*</span></label>
+              <div class="input-group input-group-merge">
+                <span class="input-group-text"><i class="bx bx-buildings"></i></span>
+                <input asp-for="Name" class="form-control" placeholder="e.g. Acme Corporation" required autofocus />
+              </div>
+              <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <!-- Contact Person -->
+            <div class="col-md-6 col-12">
+              <label asp-for="ContactPerson" class="form-label fw-semibold">Primary Contact Person</label>
+              <div class="input-group input-group-merge">
+                <span class="input-group-text"><i class="bx bx-user"></i></span>
+                <input asp-for="ContactPerson" class="form-control" placeholder="e.g. John Doe" />
+              </div>
+              <span asp-validation-for="ContactPerson" class="text-danger small"></span>
+            </div>
+
+            <!-- Email -->
+            <div class="col-md-6 col-12">
+              <label asp-for="Email" class="form-label fw-semibold">Email Address</label>
+              <div class="input-group input-group-merge">
+                <span class="input-group-text"><i class="bx bx-envelope"></i></span>
+                <input asp-for="Email" type="email" class="form-control" placeholder="contact@example.com" />
+              </div>
+              <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <!-- Phone -->
+            <div class="col-md-6 col-12">
+              <label asp-for="Phone" class="form-label fw-semibold">Phone Number</label>
+              <div class="input-group input-group-merge">
+                <span class="input-group-text"><i class="bx bx-phone"></i></span>
+                <input asp-for="Phone" class="form-control" placeholder="+1 (555) 012-3456" />
+              </div>
+              <span asp-validation-for="Phone" class="text-danger small"></span>
+            </div>
+
+            <!-- Status Switch -->
+            <div class="col-md-6 col-12 d-flex align-items-center">
+              <div class="form-check form-switch mt-3">
+                <input asp-for="IsActive" class="form-check-input" type="checkbox" id="isActiveSwitch" checked />
+                <label class="form-check-label fw-semibold" for="isActiveSwitch">Active Client Partnership</label>
+                <div class="text-muted small">Inactive clients cannot be linked to new projects.</div>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="col-12">
+              <label asp-for="Notes" class="form-label fw-semibold">Partnership Notes & Guidelines</label>
+              <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Key contact details, contractual arrangements, or delivery notes..."></textarea>
+              <span asp-validation-for="Notes" class="text-danger small"></span>
+            </div>
+
+            <!-- Actions -->
+            <div class="col-12 d-flex justify-content-end gap-2 mt-4 pt-2 border-top">
+              <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bx bx-arrow-back me-1"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bx bx-check me-1"></i> Save Client
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+  <partial name="_ValidationScriptsPartial" />
+}

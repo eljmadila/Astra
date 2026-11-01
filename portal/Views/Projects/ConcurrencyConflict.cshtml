@@ -1,0 +1,144 @@
+@model AspnetCoreMvcFull.ViewModels.Projects.ProjectConflictViewModel
+@{
+  ViewData["Title"] = $"Update Conflict — {Model.ProjectCode}";
+}
+
+<div class="row justify-content-center">
+  <div class="col-xl-10 col-lg-11 col-12">
+    <!-- Header -->
+    <div class="mb-4">
+      <h4 class="fw-bold mb-1 text-danger">
+        <i class="bx bx-error-circle me-1"></i> Update Conflict Detected
+      </h4>
+      <p class="text-muted mb-0 small">
+        Another collaborator modified project <strong>@Model.ProjectCode</strong> while you were editing. To prevent accidental data loss, your changes were not applied automatically.
+      </p>
+    </div>
+
+    <!-- Alert Banner -->
+    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+      <i class="bx bx-shield-quarter fs-3 me-3 text-warning"></i>
+      <div>
+        <h6 class="alert-heading mb-1 fw-bold">Optimistic Concurrency Protection</h6>
+        <p class="mb-0 small">
+          Please review the differences below. You can either reload the current database version or choose to re-apply your changes with updated concurrency tokens.
+        </p>
+      </div>
+    </div>
+
+    <!-- Conflict Comparison Card -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-light">
+        <h5 class="card-title mb-0 fw-bold">Side-by-Side Comparison</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 25%;">Field</th>
+              <th style="width: 37.5%;" class="text-danger bg-label-danger">Current Database Values (Saved by Other User)</th>
+              <th style="width: 37.5%;" class="text-primary bg-label-primary">Your Attempted Submissions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="fw-semibold">Title</td>
+              <td>@Model.CurrentDatabaseProject.Name</td>
+              <td class="@(Model.SubmittedModel.Name != Model.CurrentDatabaseProject.Name ? "bg-warning-subtle fw-bold" : "")">
+                @Model.SubmittedModel.Name
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Description</td>
+              <td>@(string.IsNullOrWhiteSpace(Model.CurrentDatabaseProject.Description) ? "—" : Model.CurrentDatabaseProject.Description)</td>
+              <td class="@(Model.SubmittedModel.Description != Model.CurrentDatabaseProject.Description ? "bg-warning-subtle fw-bold" : "")">
+                @(string.IsNullOrWhiteSpace(Model.SubmittedModel.Description) ? "—" : Model.SubmittedModel.Description)
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Project Lead</td>
+              <td>@(Model.CurrentDatabaseProject.Lead?.Name ?? Model.CurrentDatabaseProject.LeadId.ToString())</td>
+              <td class="@(Model.SubmittedModel.LeadId != Model.CurrentDatabaseProject.LeadId ? "bg-warning-subtle fw-bold" : "")">
+                ID: @Model.SubmittedModel.LeadId
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Status</td>
+              <td><span class="badge bg-label-secondary">@Model.CurrentDatabaseProject.Status</span></td>
+              <td class="@(Model.SubmittedModel.Status != Model.CurrentDatabaseProject.Status ? "bg-warning-subtle fw-bold" : "")">
+                <span class="badge bg-label-primary">@Model.SubmittedModel.Status</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Priority</td>
+              <td><span class="badge bg-label-secondary">@Model.CurrentDatabaseProject.Priority</span></td>
+              <td class="@(Model.SubmittedModel.Priority != Model.CurrentDatabaseProject.Priority ? "bg-warning-subtle fw-bold" : "")">
+                <span class="badge bg-label-primary">@Model.SubmittedModel.Priority</span>
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Progress (%)</td>
+              <td>@Model.CurrentDatabaseProject.ProgressPercent%</td>
+              <td class="@(Model.SubmittedModel.ProgressPercent != Model.CurrentDatabaseProject.ProgressPercent ? "bg-warning-subtle fw-bold" : "")">
+                @Model.SubmittedModel.ProgressPercent%
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Start Date</td>
+              <td>@Model.CurrentDatabaseProject.StartDate.ToString("yyyy-MM-dd")</td>
+              <td class="@(Model.SubmittedModel.StartDate != Model.CurrentDatabaseProject.StartDate ? "bg-warning-subtle fw-bold" : "")">
+                @Model.SubmittedModel.StartDate.ToString("yyyy-MM-dd")
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Planned End Date</td>
+              <td>@Model.CurrentDatabaseProject.PlannedEndDate.ToString("yyyy-MM-dd")</td>
+              <td class="@(Model.SubmittedModel.PlannedEndDate != Model.CurrentDatabaseProject.PlannedEndDate ? "bg-warning-subtle fw-bold" : "")">
+                @Model.SubmittedModel.PlannedEndDate.ToString("yyyy-MM-dd")
+              </td>
+            </tr>
+            <tr>
+              <td class="fw-semibold">Actual End Date</td>
+              <td>@(Model.CurrentDatabaseProject.ActualEndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+              <td class="@(Model.SubmittedModel.ActualEndDate != Model.CurrentDatabaseProject.ActualEndDate ? "bg-warning-subtle fw-bold" : "")">
+                @(Model.SubmittedModel.ActualEndDate?.ToString("yyyy-MM-dd") ?? "—")
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer d-flex justify-content-between align-items-center bg-white p-3 border-top">
+        <a asp-action="Edit" asp-route-id="@Model.ProjectId" class="btn btn-outline-secondary">
+          <i class="bx bx-refresh me-1"></i> Discard & Reload Latest Version
+        </a>
+        <form asp-action="Edit" asp-route-id="@Model.ProjectId" method="post" class="d-inline">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="Id" value="@Model.SubmittedModel.Id" />
+          <input type="hidden" name="Code" value="@Model.SubmittedModel.Code" />
+          <input type="hidden" name="Name" value="@Model.SubmittedModel.Name" />
+          <input type="hidden" name="Description" value="@Model.SubmittedModel.Description" />
+          <input type="hidden" name="LeadId" value="@Model.SubmittedModel.LeadId" />
+          <input type="hidden" name="Status" value="@Model.SubmittedModel.Status" />
+          <input type="hidden" name="Priority" value="@Model.SubmittedModel.Priority" />
+          <input type="hidden" name="ProgressMode" value="@Model.SubmittedModel.ProgressMode" />
+          <input type="hidden" name="ProgressPercent" value="@Model.SubmittedModel.ProgressPercent" />
+          <input type="hidden" name="StartDate" value="@Model.SubmittedModel.StartDate.ToString("yyyy-MM-dd")" />
+          <input type="hidden" name="PlannedEndDate" value="@Model.SubmittedModel.PlannedEndDate.ToString("yyyy-MM-dd")" />
+          <input type="hidden" name="ActualEndDate" value="@(Model.SubmittedModel.ActualEndDate?.ToString("yyyy-MM-dd"))" />
+          @if (Model.SubmittedModel.SelectedClientIds != null)
+          {
+            foreach (var cid in Model.SubmittedModel.SelectedClientIds)
+            {
+              <input type="hidden" name="SelectedClientIds" value="@cid" />
+            }
+          }
+          <!-- Provide updated RowVersion from the reloaded DB project to permit overwrite -->
+          <input type="hidden" name="RowVersion" value="@Convert.ToBase64String(Model.CurrentDatabaseProject.RowVersion)" />
+          <button type="submit" class="btn btn-danger">
+            <i class="bx bx-check-double me-1"></i> Overwrite with My Changes
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

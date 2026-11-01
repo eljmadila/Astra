@@ -15,6 +15,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<EmailOutboxItem> EmailOutbox => Set<EmailOutboxItem>();
+    public DbSet<Client> Clients => Set<Client>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<ProjectClient> ProjectClients => Set<ProjectClient>();
+    public DbSet<ProjectRole> ProjectRoles => Set<ProjectRole>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -91,6 +95,83 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
 
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // Clients
+        builder.Entity<Client>(entity =>
+        {
+            entity.ToTable("clients");
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            entity.Property(c => c.ContactPerson).HasMaxLength(150);
+            entity.Property(c => c.Email).HasMaxLength(256);
+            entity.Property(c => c.Phone).HasMaxLength(50);
+            entity.Property(c => c.Notes).HasColumnType("nvarchar(max)");
+            entity.Property(c => c.RowVersion).IsRowVersion();
+
+            entity.HasIndex(c => c.Name).IsUnique();
+            entity.HasIndex(c => c.IsActive);
+        });
+
+        // Project Roles
+        builder.Entity<ProjectRole>(entity =>
+        {
+            entity.ToTable("project_roles");
+            entity.HasKey(pr => pr.Id);
+            entity.Property(pr => pr.Name).HasMaxLength(100).IsRequired();
+            entity.HasIndex(pr => pr.Name).IsUnique();
+        });
+
+        // Projects
+        builder.Entity<Project>(entity =>
+        {
+            entity.ToTable("projects", t =>
+            {
+                t.HasCheckConstraint("CK_projects_planned_end", "[PlannedEndDate] >= [StartDate]");
+                t.HasCheckConstraint("CK_projects_actual_end", "[ActualEndDate] IS NULL OR [ActualEndDate] >= [StartDate]");
+                t.HasCheckConstraint("CK_projects_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
+            });
+
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Code).HasMaxLength(50).IsRequired();
+            entity.Property(p => p.Name).HasMaxLength(200).IsRequired();
+            entity.Property(p => p.Description).HasColumnType("nvarchar(max)");
+            entity.Property(p => p.Status).HasConversion<int>().IsRequired();
+            entity.Property(p => p.Priority).HasConversion<int>().IsRequired();
+            entity.Property(p => p.ProgressMode).HasConversion<int>().IsRequired();
+            entity.Property(p => p.RowVersion).IsRowVersion();
+
+            entity.HasIndex(p => p.Code).IsUnique();
+            entity.HasIndex(p => new { p.Status, p.IsArchived });
+            entity.HasIndex(p => p.LeadId);
+            entity.HasIndex(p => p.PlannedEndDate);
+
+            entity.HasOne(p => p.Lead)
+                  .WithMany()
+                  .HasForeignKey(p => p.LeadId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(p => p.CreatedBy)
+                  .WithMany()
+                  .HasForeignKey(p => p.CreatedById)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Project-Clients (Many-to-Many Join)
+        builder.Entity<ProjectClient>(entity =>
+        {
+            entity.ToTable("project_clients");
+            entity.HasKey(pc => new { pc.ProjectId, pc.ClientId });
+
+            entity.HasOne(pc => pc.Project)
+                  .WithMany(p => p.ProjectClients)
+                  .HasForeignKey(pc => pc.ProjectId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(pc => pc.Client)
+                  .WithMany(c => c.ProjectClients)
+                  .HasForeignKey(pc => pc.ClientId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

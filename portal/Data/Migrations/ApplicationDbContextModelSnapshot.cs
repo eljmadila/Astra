@@ -192,6 +192,59 @@ namespace AspnetCoreMvcFull.Data.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.Client", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("clients", (string)null);
+                });
+
             modelBuilder.Entity("AspnetCoreMvcFull.Entities.EmailOutboxItem", b =>
                 {
                     b.Property<int>("Id")
@@ -282,6 +335,134 @@ namespace AspnetCoreMvcFull.Data.Migrations
                     b.HasIndex("UserId", "IsRead");
 
                     b.ToTable("notifications", (string)null);
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.Project", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly?>("ActualEndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedById")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LeadId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly>("PlannedEndDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProgressMode")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProgressPercent")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("LeadId");
+
+                    b.HasIndex("PlannedEndDate");
+
+                    b.HasIndex("Status", "IsArchived");
+
+                    b.ToTable("projects", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_projects_actual_end", "[ActualEndDate] IS NULL OR [ActualEndDate] >= [StartDate]");
+
+                            t.HasCheckConstraint("CK_projects_planned_end", "[PlannedEndDate] >= [StartDate]");
+
+                            t.HasCheckConstraint("CK_projects_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
+                        });
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.ProjectClient", b =>
+                {
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ProjectId", "ClientId");
+
+                    b.HasIndex("ClientId");
+
+                    b.ToTable("project_clients", (string)null);
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.ProjectRole", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("project_roles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -408,6 +589,44 @@ namespace AspnetCoreMvcFull.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.Project", b =>
+                {
+                    b.HasOne("AspnetCoreMvcFull.Entities.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AspnetCoreMvcFull.Entities.ApplicationUser", "Lead")
+                        .WithMany()
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Lead");
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.ProjectClient", b =>
+                {
+                    b.HasOne("AspnetCoreMvcFull.Entities.Client", "Client")
+                        .WithMany("ProjectClients")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AspnetCoreMvcFull.Entities.Project", "Project")
+                        .WithMany("ProjectClients")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
                 {
                     b.HasOne("AspnetCoreMvcFull.Entities.ApplicationRole", null)
@@ -457,6 +676,16 @@ namespace AspnetCoreMvcFull.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.Client", b =>
+                {
+                    b.Navigation("ProjectClients");
+                });
+
+            modelBuilder.Entity("AspnetCoreMvcFull.Entities.Project", b =>
+                {
+                    b.Navigation("ProjectClients");
                 });
 #pragma warning restore 612, 618
         }

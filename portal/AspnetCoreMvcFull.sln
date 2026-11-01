@@ -5,16 +5,42 @@ VisualStudioVersion = 17.8.34322.80
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspnetCoreMvcFull", "AspnetCoreMvcFull.csproj", "{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Astra.Tests", "..\tests\Astra.Tests\Astra.Tests.csproj", "{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Debug|x64.Build.0 = Debug|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Debug|x86.Build.0 = Debug|Any CPU
 		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Release|x64.ActiveCfg = Release|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Release|x64.Build.0 = Release|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Release|x86.ActiveCfg = Release|Any CPU
+		{B0669AA4-51EF-43CE-9DA1-15DC79CF979D}.Release|x86.Build.0 = Release|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Debug|x64.Build.0 = Debug|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Debug|x86.Build.0 = Debug|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Release|x64.ActiveCfg = Release|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Release|x64.Build.0 = Release|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Release|x86.ActiveCfg = Release|Any CPU
+		{1C8AEE7F-5281-4DF2-8071-3B0A7A662178}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,214 @@
+@model AspnetCoreMvcFull.ViewModels.Clients.ClientDetailsViewModel
+@{
+  ViewData["Title"] = $"{Model.Client.Name} — Client Profile";
+  bool isManagerOrAdmin = User.IsInRole("Admin") || User.IsInRole("Manager");
+}
+
+<div class="row">
+  <!-- Client Profile Overview Column -->
+  <div class="col-xl-4 col-lg-5 col-md-5">
+    <div class="card mb-4 shadow-sm border-0">
+      <div class="card-body">
+        <div class="user-avatar-section text-center pb-3 border-bottom">
+          <div class="avatar avatar-xl mx-auto mb-3">
+            <span class="avatar-initial rounded-circle bg-label-primary fs-2 fw-bold">
+              @(Model.Client.Name.Length > 0 ? Model.Client.Name[0].ToString().ToUpper() : "C")
+            </span>
+          </div>
+          <h5 class="mb-1 fw-bold">@Model.Client.Name</h5>
+          @if (Model.Client.IsActive)
+          {
+            <span class="badge bg-label-success">Active Partnership</span>
+          }
+          else
+          {
+            <span class="badge bg-label-danger">Deactivated</span>
+          }
+        </div>
+
+        <div class="info-container pt-3">
+          <small class="text-uppercase text-muted fw-bold">Stakeholder Details</small>
+          <ul class="list-unstyled mt-3 mb-4">
+            <li class="d-flex align-items-center mb-3">
+              <i class="bx bx-user me-2 text-primary"></i>
+              <span class="fw-semibold me-2">Contact:</span>
+              <span>@(string.IsNullOrWhiteSpace(Model.Client.ContactPerson) ? "Not Specified" : Model.Client.ContactPerson)</span>
+            </li>
+            <li class="d-flex align-items-center mb-3">
+              <i class="bx bx-envelope me-2 text-primary"></i>
+              <span class="fw-semibold me-2">Email:</span>
+              @if (!string.IsNullOrWhiteSpace(Model.Client.Email))
+              {
+                <a href="mailto:@Model.Client.Email" class="text-body text-truncate">@Model.Client.Email</a>
+              }
+              else
+              {
+                <span class="text-muted">Not Specified</span>
+              }
+            </li>
+            <li class="d-flex align-items-center mb-3">
+              <i class="bx bx-phone me-2 text-primary"></i>
+              <span class="fw-semibold me-2">Phone:</span>
+              <span>@(string.IsNullOrWhiteSpace(Model.Client.Phone) ? "Not Specified" : Model.Client.Phone)</span>
+            </li>
+            <li class="d-flex align-items-center mb-3">
+              <i class="bx bx-calendar me-2 text-primary"></i>
+              <span class="fw-semibold me-2">Onboarded:</span>
+              <span>@Model.Client.CreatedAt.ToString("MMM dd, yyyy")</span>
+            </li>
+            <li class="d-flex align-items-center">
+              <i class="bx bx-briefcase-alt-2 me-2 text-primary"></i>
+              <span class="fw-semibold me-2">Portfolio:</span>
+              <span>@Model.Projects.Count project(s)</span>
+            </li>
+          </ul>
+
+          @if (!string.IsNullOrWhiteSpace(Model.Client.Notes))
+          {
+            <div class="mb-4 p-3 bg-light rounded small">
+              <span class="fw-semibold d-block mb-1 text-muted">Partnership Notes:</span>
+              <p class="mb-0 text-secondary">@Model.Client.Notes</p>
+            </div>
+          }
+
+          @if (isManagerOrAdmin)
+          {
+            <div class="d-flex justify-content-center gap-2 pt-2">
+              <a asp-action="Edit" asp-route-id="@Model.Client.Id" class="btn btn-primary w-100">
+                <i class="bx bx-edit me-1"></i> Edit Client
+              </a>
+              <form asp-action="ToggleStatus" asp-route-id="@Model.Client.Id" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-@(Model.Client.IsActive ? "warning" : "success")" title="@(Model.Client.IsActive ? "Deactivate" : "Reactivate")">
+                  <i class="bx bx-power-off"></i>
+                </button>
+              </form>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Associated Projects Column -->
+  <div class="col-xl-8 col-lg-7 col-md-7">
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center pb-2">
+        <h5 class="mb-0 fw-bold">Linked Projects & Engagements</h5>
+        @if (isManagerOrAdmin)
+        {
+          <a asp-controller="Projects" asp-action="Create" class="btn btn-sm btn-outline-primary">
+            <i class="bx bx-plus me-1"></i> Create Project
+          </a>
+        }
+      </div>
+      <div class="table-responsive text-nowrap">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Code & Name</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Progress</th>
+              <th>Lead</th>
+              <th>End Date</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-border-bottom-0">
+            @if (Model.Projects.Count == 0)
+            {
+              <tr>
+                <td colspan="7" class="text-center py-5">
+                  <div class="text-muted">
+                    <i class="bx bx-folder-open fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                    <h6 class="mb-1">No projects associated with this client</h6>
+                    <p class="small text-muted mb-3">Link this client when provisioning a new project engagement.</p>
+                  </div>
+                </td>
+              </tr>
+            }
+            else
+            {
+              @foreach (var prj in Model.Projects)
+              {
+                <tr>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span class="badge bg-label-secondary mb-1 align-self-start font-monospace small">@prj.Code</span>
+                      <a asp-controller="Projects" asp-action="Details" asp-route-id="@prj.Id" class="fw-semibold text-body">
+                        @prj.Name
+                      </a>
+                    </div>
+                  </td>
+                  <td>
+                    @switch (prj.Status)
+                    {
+                      case AspnetCoreMvcFull.Entities.ProjectStatus.NotStarted:
+                        <span class="badge bg-label-secondary">Not Started</span>
+                        break;
+                      case AspnetCoreMvcFull.Entities.ProjectStatus.InProgress:
+                        <span class="badge bg-label-primary">In Progress</span>
+                        break;
+                      case AspnetCoreMvcFull.Entities.ProjectStatus.OnHold:
+                        <span class="badge bg-label-warning">On Hold</span>
+                        break;
+                      case AspnetCoreMvcFull.Entities.ProjectStatus.Completed:
+                        <span class="badge bg-label-success">Completed</span>
+                        break;
+                      case AspnetCoreMvcFull.Entities.ProjectStatus.Cancelled:
+                        <span class="badge bg-label-danger">Cancelled</span>
+                        break;
+                    }
+                  </td>
+                  <td>
+                    @switch (prj.Priority)
+                    {
+                      case AspnetCoreMvcFull.Entities.ProjectPriority.Critical:
+                        <span class="badge bg-danger">Critical</span>
+                        break;
+                      case AspnetCoreMvcFull.Entities.ProjectPriority.High:
+                        <span class="badge bg-label-danger">High</span>
+                        break;
+                      case AspnetCoreMvcFull.Entities.ProjectPriority.Medium:
+                        <span class="badge bg-label-info">Medium</span>
+                        break;
+                      case AspnetCoreMvcFull.Entities.ProjectPriority.Low:
+                        <span class="badge bg-label-secondary">Low</span>
+                        break;
+                    }
+                  </td>
+                  <td style="min-width: 120px;">
+                    <div class="d-flex align-items-center">
+                      <div class="progress w-100 me-2" style="height: 6px;">
+                        <div class="progress-bar @(prj.ProgressPercent == 100 ? "bg-success" : "bg-primary")" role="progressbar" style="width: @prj.ProgressPercent%"></div>
+                      </div>
+                      <small class="fw-semibold">@prj.ProgressPercent%</small>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="small">@prj.LeadName</span>
+                  </td>
+                  <td>
+                    <div class="d-flex flex-column">
+                      <span class="small">@prj.PlannedEndDate.ToString("MMM dd, yyyy")</span>
+                      @if (prj.IsOverdue)
+                      {
+                        <span class="badge bg-label-danger font-size-xs mt-1">Overdue</span>
+                      }
+                    </div>
+                  </td>
+                  <td class="text-end">
+                    <a asp-controller="Projects" asp-action="Details" asp-route-id="@prj.Id" class="btn btn-sm btn-icon btn-outline-primary" title="View Project">
+                      <i class="bx bx-chevron-right"></i>
+                    </a>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

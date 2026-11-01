@@ -92,6 +92,8 @@ builder.Services.AddAuthorization(options =>
 // Application Services
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IEmailSender, DevEmailSender>();
+builder.Services.AddScoped<IProjectCodeGenerator, ProjectCodeGenerator>();
+builder.Services.AddScoped<IProjectScopingService, ProjectScopingService>();
 
 // Global Anti-Forgery Token Validation on Mutating Requests
 builder.Services.AddControllersWithViews(options =>

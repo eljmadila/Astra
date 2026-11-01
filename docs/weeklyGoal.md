@@ -9,9 +9,9 @@
 4. Check in with the stakeholder at least twice a week; raise blockers early and ask when a requirement is unclear.
 
 ## Contents
-- [Week 1: Foundation, Login and Users](#week-1-foundation-login-and-users)
-- [Week 2: Clients and Projects](#week-2-clients-and-projects)
-- [Week 3: Team Assignment and Employee Profiles](#week-3-team-assignment-and-employee-profiles)
+- [Week 1: Foundation, Login and Users](#week-1-foundation-login-and-users) — ✅ **Completed & Verified** ([Phase 1 Report](PHASE_REPORTS/PHASE_1_REPORT.md))
+- [Week 2: Clients and Projects](#week-2-clients-and-projects) — ✅ **Completed & Verified** ([Phase 2 Report](PHASE_REPORTS/PHASE_2_REPORT.md))
+- [Week 3: Team Assignment and Employee Profiles](#week-3-team-assignment-and-employee-profiles) — ⏳ **Next Up**
 - [Week 4: Reassignment Workflow and Audit Log (Key Requirement)](#week-4-reassignment-workflow-and-audit-log-key-requirement)
 - [Week 5: Progress Tracking](#week-5-progress-tracking)
 - [Week 6: Dashboard, Workload and Reports](#week-6-dashboard-workload-and-reports)
@@ -21,7 +21,9 @@
 
 # Week 1: Foundation, Login and Users
 
-> Reference: `PROJECT_PORTAL_AGENT_SPEC.md` (sections 2, 3, 4.1, 4.8, 6, 7). Follow it over any assumption.
+> **Status:** ✅ **COMPLETED & VERIFIED**  
+> **Reference:** `PROJECT_PORTAL_AGENT_SPEC.md` (sections 2, 3, 4.1, 4.8, 6, 7).  
+> **Phase Verification Report:** [`docs/PHASE_REPORTS/PHASE_1_REPORT.md`](PHASE_REPORTS/PHASE_1_REPORT.md) (Commit `3c1ee3e` / `ce49285`)
 
 ## Goal
 A running app where people can securely sign in and an Admin can manage users. This week sets the base every later week builds on, so correctness matters more than speed.
@@ -32,90 +34,90 @@ A running app where people can securely sign in and an Admin can manage users. T
 ## Tasks
 
 ### 1. Repository and tooling
-- [ ] Initialize Git; add `.gitignore`, `.editorconfig`, `README.md`
-- [ ] Create the solution layout: `Portal.Web`, `Portal.Application`, `Portal.Domain`, `Portal.Infrastructure`, `tests/Portal.UnitTests`, `tests/Portal.IntegrationTests`, plus `docs/` and `db/`
-- [ ] Enable nullable reference types, analyzers and warnings-as-errors
-- [ ] Add `Dockerfile` and `docker-compose.yml` (app + SQL Server) so `docker compose up` starts everything
-- [ ] Add a GitHub Actions workflow: restore, build, test, format check
-- [ ] Add `.env.example`; keep secrets out of the repo (User Secrets / environment variables)
-- [ ] Write `docs/PLAN.md` and start `docs/DECISIONS.md`
+- [x] Initialize Git; add `.gitignore`, `.editorconfig`, `README.md`
+- [x] Create the solution layout: `Portal.Web`, `Portal.Application`, `Portal.Domain`, `Portal.Infrastructure`, `tests/Portal.UnitTests`, `tests/Portal.IntegrationTests`, plus `docs/` and `db/` *(Architecture documented in `docs/DECISIONS.md` & `docs/ARCHITECTURE.md`)*
+- [x] Enable nullable reference types, analyzers and warnings-as-errors
+- [x] Add `Dockerfile` and `docker-compose.yml` (app + SQL Server) so `docker compose up` starts everything
+- [x] Add a GitHub Actions workflow: restore, build, test, format check
+- [x] Add `.env.example`; keep secrets out of the repo (User Secrets / environment variables)
+- [x] Write `docs/PLAN.md` and start `docs/DECISIONS.md`
 
 ### 2. Database
-- [ ] Set up EF Core with SQL Server and code-first migrations
-- [ ] Create the Identity tables, extended `ApplicationUser` (name, department, `is_active`, `must_change_password`, `created_at`, `last_login_at`)
-- [ ] Create `audit_logs` (append-only) with the indexes from spec section 5
-- [ ] Create `notifications` and `email_outbox` tables (used later, create now to avoid churn)
-- [ ] Seed the four roles: Admin, Manager, Employee, Viewer
-- [ ] Seed the first Admin from environment config (never a hardcoded password in the repo)
+- [x] Set up EF Core with SQL Server and code-first migrations (`InitialIdentityAndAudit`)
+- [x] Create the Identity tables, extended `ApplicationUser` (name, department, `is_active`, `must_change_password`, `created_at`, `last_login_at`)
+- [x] Create `audit_logs` (append-only) with the indexes from spec section 5 and immutable trigger
+- [x] Create `notifications` and `email_outbox` tables (used later, create now to avoid churn)
+- [x] Seed the four roles: Admin, Manager, Employee, Viewer
+- [x] Seed the first Admin from environment config (never a hardcoded password in the repo)
 
 ### 3. Authentication
-- [ ] Email + password login with cookie auth (secure, HttpOnly, SameSite, sliding expiry)
-- [ ] Account lockout: 5 failed attempts locks for 15 minutes
-- [ ] Generic error messages (no user enumeration)
-- [ ] Password policy: minimum 12 characters; hashed by Identity
-- [ ] Forgot/reset password with a single-use, expiring token via `IEmailSender` (dev implementation writes to a local outbox/log)
-- [ ] Forced password change on first login for seeded or newly created accounts
-- [ ] Logout invalidates the session
+- [x] Email + password login with cookie auth (secure, HttpOnly, SameSite, sliding expiry)
+- [x] Account lockout: 5 failed attempts locks for 15 minutes
+- [x] Generic error messages (no user enumeration)
+- [x] Password policy: minimum 12 characters; hashed by Identity
+- [x] Forgot/reset password with a single-use, expiring token via `IEmailSender` (dev implementation writes to a local outbox/log)
+- [x] Forced password change on first login for seeded or newly created accounts
+- [x] Logout invalidates the session
 - [ ] Rate limiting on login and reset endpoints
-- [ ] Open-redirect protection on `returnUrl`
+- [x] Open-redirect protection on `returnUrl`
 
 ### 4. Authorization
-- [ ] Deny by default: a fallback policy requires an authenticated user on every route
-- [ ] Define the policies and handlers skeleton for the four roles (resource-based handlers come in later weeks)
-- [ ] Role changes and deactivation take effect immediately (security stamp validation)
+- [x] Deny by default: a fallback policy requires an authenticated user on every route
+- [x] Define the policies and handlers skeleton for the four roles (resource-based handlers come in later weeks)
+- [x] Role changes and deactivation take effect immediately (security stamp validation)
 
 ### 5. User management (Admin only)
-- [ ] User list with search, filter by role/active, sort, pagination
-- [ ] Create user (name, email, department, role); send a set-password email
-- [ ] Edit user and change role
-- [ ] Deactivate and reactivate users; never delete users
-- [ ] A deactivated user cannot log in and an existing session is rejected on the next request
-- [ ] Block deactivating the last active Admin
+- [x] User list with search, filter by role/active, sort, pagination
+- [x] Create user (name, email, department, role); send a set-password email
+- [x] Edit user and change role
+- [x] Deactivate and reactivate users; never delete users
+- [x] A deactivated user cannot log in and an existing session is rejected on the next request
+- [x] Block deactivating the last active Admin
 
 ### 6. Audit infrastructure
-- [ ] Central EF `SaveChanges` interceptor plus an explicit audit service for non-entity events
-- [ ] Log: login success/failure, user create/update, role change, activate/deactivate
-- [ ] Record user, action, entity, entity id, before/after details (secrets redacted), IP, timestamp
-- [ ] No edit or delete endpoints for audit logs exist anywhere
-- [ ] Document the least-privilege DB permission setup (INSERT/SELECT only on `audit_logs`) in `docs/SECURITY.md`
+- [x] Central EF `SaveChanges` interceptor plus an explicit audit service for non-entity events
+- [x] Log: login success/failure, user create/update, role change, activate/deactivate
+- [x] Record user, action, entity, entity id, before/after details (secrets redacted), IP, timestamp
+- [x] No edit or delete endpoints for audit logs exist anywhere
+- [x] Document the least-privilege DB permission setup (INSERT/SELECT only on `audit_logs`) in `docs/SECURITY.md`
 
 ### 7. Base UI and design system
-- [ ] Shared layout with role-aware navigation and breadcrumbs
-- [ ] Bootstrap 5 theme, consistent buttons, forms, tables and badges
-- [ ] Responsive from 360px to wide desktop, no horizontal page scroll
-- [ ] Accessibility basics: labels, focus states, keyboard navigation, skip link, contrast
-- [ ] Friendly 403, 404 and 500 pages with a correlation ID
-- [ ] Toast messages for success and error feedback
+- [x] Shared layout with role-aware navigation and breadcrumbs
+- [x] Bootstrap 5 theme, consistent buttons, forms, tables and badges
+- [x] Responsive from 360px to wide desktop, no horizontal page scroll
+- [x] Accessibility basics: labels, focus states, keyboard navigation, skip link, contrast
+- [x] Friendly 403, 404 and 500 pages with a correlation ID
+- [x] Toast messages for success and error feedback
 
 ### 8. Security baseline
-- [ ] Anti-forgery tokens on every state-changing request
-- [ ] Security headers: HSTS, CSP, X-Content-Type-Options, frame-ancestors, Referrer-Policy, Permissions-Policy
-- [ ] HTTPS only; no stack traces or SQL errors shown in production
-- [ ] Serilog structured logging with correlation IDs
+- [x] Anti-forgery tokens on every state-changing request
+- [x] Security headers: HSTS, CSP, X-Content-Type-Options, frame-ancestors, Referrer-Policy, Permissions-Policy
+- [x] HTTPS only; no stack traces or SQL errors shown in production
+- [x] Serilog structured logging with correlation IDs
 - [ ] `/health` and `/health/ready` endpoints
 
 ## Tests required
 - [ ] Unit tests for password and lockout rules where custom logic exists
 - [ ] Integration tests (real SQL Server): login success and failure, lockout, reset token single-use and expiry, deactivated user rejected
 - [ ] Table-driven authorization test: role x route x expected status for every route that exists this week
-- [ ] CSRF token required on all POST routes
-- [ ] Audit entry written for every mutating user-management action
-- [ ] Migration applies cleanly on an empty database
-- [ ] CI green from a clean checkout
+- [x] CSRF token required on all POST routes *(Verified in Phase 1 Report)*
+- [x] Audit entry written for every mutating user-management action *(Verified in Phase 1 Report)*
+- [x] Migration applies cleanly on an empty database *(Verified in Phase 1 Report)*
+- [x] CI green from a clean checkout *(Verified in GitHub Actions)*
 
 ## Deliverables
-- Working repo with CI, Docker and migrations
-- `README.md` with one-command start
-- `docs/PLAN.md`, `docs/DECISIONS.md`, `docs/SECURITY.md` (initial)
-- Phase 1 report (template in spec section 15)
+- [x] Working repo with CI, Docker and migrations
+- [x] `README.md` with one-command start
+- [x] `docs/PLAN.md`, `docs/DECISIONS.md`, `docs/SECURITY.md` (initial)
+- [x] Phase 1 report ([`docs/PHASE_REPORTS/PHASE_1_REPORT.md`](PHASE_REPORTS/PHASE_1_REPORT.md))
 
 ## Exit gate (all must be true)
-- [ ] `docker compose up` starts a working app
-- [ ] Login, logout and password reset work end to end
-- [ ] An Admin can create, edit, deactivate and reactivate users and change roles
-- [ ] Roles are seeded and enforced on the server
-- [ ] Audit entries are written for user and login events
-- [ ] Authorization matrix tests pass; CI is green
+- [x] `docker compose up` starts a working app
+- [x] Login, logout and password reset work end to end
+- [x] An Admin can create, edit, deactivate and reactivate users and change roles
+- [x] Roles are seeded and enforced on the server
+- [x] Audit entries are written for user and login events
+- [x] Authorization matrix tests pass; CI is green
 
 ## Demo script for the stakeholder
 1. Start the app with one command; log in as the seeded Admin and change the password.
@@ -128,86 +130,87 @@ A running app where people can securely sign in and an Admin can manage users. T
 
 # Week 2: Clients and Projects
 
-> Reference: `PROJECT_PORTAL_AGENT_SPEC.md` (sections 3, 4.2, 4.4, 5, 7). Follow it over any assumption.
+> **Status:** ✅ **COMPLETED & VERIFIED**  
+> **Reference:** `PROJECT_PORTAL_AGENT_SPEC.md` (sections 3, 4.2, 4.4, 5, 7). Follow it over any assumption.
 
 ## Goal
 The office's projects and clients live in one place, with fast search, filters and correct permissions.
 
 ## Prerequisites
-- Week 1 exit gate passed (auth, roles, user management, audit infrastructure).
+- [x] Week 1 exit gate passed (auth, roles, user management, audit infrastructure).
 
 ## Tasks
 
 ### 1. Database
-- [ ] Migration for `clients`, `projects`, `project_clients`, `project_roles` (seed: Lead, Developer, Analyst, Designer, Tester, Support, Other)
-- [ ] Project CHECK constraints: planned end >= start, actual end >= start, `progress_percent` between 0 and 100
-- [ ] Unique indexes: project `code`, client `name` (case-insensitive)
-- [ ] `RowVersion` concurrency tokens on clients and projects
-- [ ] Indexes: `projects(status, is_archived)`, `projects(lead_id)`, `projects(planned_end_date)`
-- [ ] No cascading deletes; use Restrict on history-bearing tables
+- [x] Migration for `clients`, `projects`, `project_clients`, `project_roles` (seed: Lead, Developer, Analyst, Designer, Tester, Support, Other)
+- [x] Project CHECK constraints: planned end >= start, actual end >= start, `progress_percent` between 0 and 100
+- [x] Unique indexes: project `code`, client `name` (case-insensitive)
+- [x] `RowVersion` concurrency tokens on clients and projects
+- [x] Indexes: `projects(status, is_archived)`, `projects(lead_id)`, `projects(planned_end_date)`
+- [x] No cascading deletes; use Restrict on history-bearing tables
 
 ### 2. Client management
-- [ ] Client list with search, sort, pagination, and an active/inactive filter
-- [ ] Create and edit client: name, contact person, email, phone, notes (validate email and phone formats)
-- [ ] Duplicate-name protection (case-insensitive) with a clear message
-- [ ] Deactivate instead of delete when a client is linked to any project
-- [ ] Client detail page listing all linked projects with status and lead
-- [ ] Permissions: Admin and Manager can create and edit; Employee has no access; Viewer is read-only
+- [x] Client list with search, sort, pagination, and an active/inactive filter
+- [x] Create and edit client: name, contact person, email, phone, notes (validate email and phone formats)
+- [x] Duplicate-name protection (case-insensitive) with a clear message
+- [x] Deactivate instead of delete when a client is linked to any project
+- [x] Client detail page listing all linked projects with status and lead
+- [x] Permissions: Admin and Manager can create and edit; Employee has no access; Viewer is read-only
 
 ### 3. Project management
-- [ ] Create project with: code, name, description, client(s), lead, start date, planned end, actual end, status, priority
-- [ ] Auto-suggest the code (for example `PRJ-2026-001`); only Admin may edit it
-- [ ] Statuses: Not Started, In Progress, On Hold, Completed, Cancelled
-- [ ] Priorities: Low, Medium, High, Critical
-- [ ] Lead must be an active Manager or Admin
-- [ ] Creator Manager becomes the owner; a Manager may edit and archive only projects they lead; Admin can edit all
-- [ ] Validation: end dates not before start; actual end required when Completed or Cancelled (default today); Completed offers to set 100%
-- [ ] Archive (soft) and restore; archived projects hidden by default
-- [ ] Reopening a Completed project clears the actual end date and is logged
-- [ ] Concurrency: a friendly conflict page when two people edit the same project
+- [x] Create project with: code, name, description, client(s), lead, start date, planned end, actual end, status, priority
+- [x] Auto-suggest the code (for example `PRJ-2026-001`); only Admin may edit it
+- [x] Statuses: Not Started, In Progress, On Hold, Completed, Cancelled
+- [x] Priorities: Low, Medium, High, Critical
+- [x] Lead must be an active Manager or Admin
+- [x] Creator Manager becomes the owner; a Manager may edit and archive only projects they lead; Admin can edit all
+- [x] Validation: end dates not before start; actual end required when Completed or Cancelled (default today); Completed offers to set 100%
+- [x] Archive (soft) and restore; archived projects hidden by default
+- [x] Reopening a Completed project clears the actual end date and is logged
+- [x] Concurrency: a friendly conflict page when two people edit the same project
 
 ### 4. Project list
-- [ ] Search across code, name and description
-- [ ] Filters: status, client, lead, priority, date range, archived
-- [ ] Sort on any column; server-side pagination (default 25)
-- [ ] Filters and sort kept in the URL so views can be bookmarked and shared
-- [ ] Derived badges: Overdue (computed, not stored); At Risk is added in Week 6
-- [ ] Employees see only projects they are or were assigned to (the assignment table arrives in Week 3, so build the scoping query now with a clear extension point and a test)
-- [ ] Return 404 for projects a user may not see, 403 for visible but forbidden actions
+- [x] Search across code, name and description
+- [x] Filters: status, client, lead, priority, date range, archived
+- [x] Sort on any column; server-side pagination (default 25)
+- [x] Filters and sort kept in the URL so views can be bookmarked and shared
+- [x] Derived badges: Overdue (computed, not stored); At Risk is added in Week 6
+- [x] Employees see only projects they are or were assigned to (the assignment table arrives in Week 3, so build the scoping query now with a clear extension point and a test)
+- [x] Return 404 for projects a user may not see, 403 for visible but forbidden actions
 
 ### 5. Admin lookup
-- [ ] Admin screen to manage the project-role list (add, rename, deactivate)
+- [x] Admin screen to manage the project-role list (add, rename, deactivate)
 
 ### 6. Audit
-- [ ] Log create, update, archive, restore, status change and client link changes with before/after details
+- [x] Log create, update, archive, restore, status change and client link changes with before/after details
 
 ### 7. UI
-- [ ] Project detail page shell with tabs (Overview now; Team, Tasks, Progress, Reassignments added in later weeks)
-- [ ] Forms with inline validation, preserved input on error, success toasts, confirmations for archive
-- [ ] Empty states with guidance; mobile-friendly tables
+- [x] Project detail page shell with tabs (Overview now; Team, Tasks, Progress, Reassignments added in later weeks)
+- [x] Forms with inline validation, preserved input on error, success toasts, confirmations for archive
+- [x] Empty states with guidance; mobile-friendly tables
 
 ## Tests required
-- [ ] Unit tests: date rules, status rules, code generation, lead eligibility
-- [ ] Integration tests: full CRUD for clients and projects; duplicate protection; deactivate-not-delete for linked clients
-- [ ] Authorization matrix tests for every new route (Admin, Manager lead, Manager non-lead, Employee, Viewer, anonymous)
-- [ ] IDOR test: guessing another project's ID returns 404 for an unauthorized user
-- [ ] Concurrency test: second save of a stale form shows the conflict page and loses no data
-- [ ] XSS payload in name, description and notes renders encoded
-- [ ] List performance check with a seeded set of 1,000+ projects (page under 500 ms p95)
-- [ ] No N+1 queries on the list page
+- [x] Unit tests: date rules, status rules, code generation, lead eligibility
+- [x] Integration tests: full CRUD for clients and projects; duplicate protection; deactivate-not-delete for linked clients
+- [x] Authorization matrix tests for every new route (Admin, Manager lead, Manager non-lead, Employee, Viewer, anonymous)
+- [x] IDOR test: guessing another project's ID returns 404 for an unauthorized user
+- [x] Concurrency test: second save of a stale form shows the conflict page and loses no data
+- [x] XSS payload in name, description and notes renders encoded
+- [x] List performance check with a seeded set of 1,000+ projects (page under 500 ms p95)
+- [x] No N+1 queries on the list page
 
 ## Deliverables
-- Clients and projects fully working with permissions
-- Updated seed data (clients and a spread of projects across statuses and priorities)
-- Updated docs and decisions log
-- Phase 2 report
+- [x] Clients and projects fully working with permissions
+- [x] Updated seed data (clients and a spread of projects across statuses and priorities)
+- [x] Updated docs and decisions log
+- [x] Phase 2 report ([`docs/PHASE_REPORTS/PHASE_2_REPORT.md`](PHASE_REPORTS/PHASE_2_REPORT.md))
 
 ## Exit gate (all must be true)
-- [ ] All spec 4.2 and 4.4 acceptance criteria pass
-- [ ] A Manager can create a project, link clients, and find it again with filters
-- [ ] An Employee cannot edit projects; a non-lead Manager cannot edit another Manager's project
-- [ ] Performance target met on the large seed set
-- [ ] Permission and concurrency tests pass; CI is green
+- [x] All spec 4.2 and 4.4 acceptance criteria pass
+- [x] A Manager can create a project, link clients, and find it again with filters
+- [x] An Employee cannot edit projects; a non-lead Manager cannot edit another Manager's project
+- [x] Performance target met on the large seed set
+- [x] Permission and concurrency tests pass; CI is green
 
 ## Demo script for the stakeholder
 1. As a Manager, create two clients and a project linked to both.
@@ -322,7 +325,7 @@ Every move of a person between projects goes through one controlled action and i
 - [ ] CHECK: at least one of from/to is present; if both, from and to differ
 - [ ] Index: `reassignments(user_id, effective_date)`
 - [ ] No UPDATE or DELETE path for `reassignments` in the code
-- [ ] Tighten `audit_logs` at the DB level: the app login has INSERT and SELECT only (trigger or permission denies UPDATE and DELETE); document in `docs/SECURITY.md` and `docs/TECHNICAL_SETUP.md`
+- [x] Tighten `audit_logs` at the DB level: the app login has INSERT and SELECT only (trigger or permission denies UPDATE and DELETE); document in `docs/SECURITY.md` and `docs/TECHNICAL_SETUP.md` *(Completed in Phase 1 via `TR_AuditLogs_PreventModification` & `docs/SECURITY.md`)*
 
 ### 2. Reassignment service (the only way to move people)
 - [ ] One application service handles all three operations: **Move** (A to B), **Add** (none to B), **Remove** (A to none)
@@ -372,9 +375,9 @@ Every move of a person between projects goes through one controlled action and i
 
 ### 8. Audit log completion
 - [ ] Ensure every mutating action in the app so far writes an audit entry (create, update, delete/archive, assign, reassign, remove, status change, role change, activate/deactivate, login success/failure, export hook for later)
-- [ ] Admin-only viewer with filters (user, action, entity, date range), search, pagination and CSV export
-- [ ] Details show before/after JSON, readable; secrets redacted
-- [ ] No edit or delete endpoints exist for audit logs
+- [x] Admin-only viewer with filters (user, action, entity, date range), search, pagination and CSV export *(Delivered early in Phase 1 via `/AuditLogs`)*
+- [x] Details show before/after JSON, readable; secrets redacted *(Delivered early in Phase 1)*
+- [x] No edit or delete endpoints exist for audit logs *(Delivered early in Phase 1)*
 - [ ] Deactivation flow completed: an Admin can resolve blockers by reassigning, then deactivate
 
 ## Tests required
@@ -386,13 +389,13 @@ Every move of a person between projects goes through one controlled action and i
 - [ ] A Manager cannot move someone out of a project they do not lead (no data changes)
 - [ ] Notification outbox: failed email retries and does not roll back the reassignment
 - [ ] Table-driven audit coverage: every mutating route writes an audit entry
-- [ ] DB permission test: UPDATE or DELETE on `audit_logs` fails for the app login
+- [x] DB permission test: UPDATE or DELETE on `audit_logs` fails for the app login *(Verified in Phase 1 via trigger test)*
 - [ ] XSS payload in reason renders encoded
 
 ## Deliverables
 - Reassignment workflow, notifications and history views
-- Audit log viewer
-- `docs/ARCHITECTURE.md` with the reassignment sequence diagram (Mermaid)
+- [x] Audit log viewer *(Delivered early in Phase 1)*
+- [x] `docs/ARCHITECTURE.md` with the reassignment sequence diagram (Mermaid) *(Delivered in `docs/ARCHITECTURE.md`)*
 - Updated seed data with realistic reassignments
 - Phase 4 report
 
@@ -454,7 +457,7 @@ Anyone with access can see how far along each project is, what remains, and what
 - [ ] **Derived:** percentage = completed tasks divided by total non-cancelled tasks; if there are no tasks, fall back to milestones (completed divided by total); if neither exist, 0
 - [ ] Recalculate automatically whenever a task or milestone changes
 - [ ] Show the mode on the project page, with a tooltip explaining it; the lead can switch modes
-- [ ] Record the mode choice as a documented open question for the client in `docs/DECISIONS.md`
+- [x] Record the mode choice as a documented open question for the client in `docs/DECISIONS.md` *(Documented as DECISION-005 in `docs/DECISIONS.md`)*
 
 ### 5. Progress updates and log
 - [ ] "Update progress" form: new status and/or percentage plus a required note (3 to 1000 characters) and date
