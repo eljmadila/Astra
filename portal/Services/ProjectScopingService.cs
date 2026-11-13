@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using AspnetCoreMvcFull.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace AspnetCoreMvcFull.Services;
 
@@ -10,6 +9,8 @@ public interface IProjectScopingService
     bool CanUserViewProject(Project project, ClaimsPrincipal user, int? userId = null);
     bool CanUserEditProject(Project project, ClaimsPrincipal user, int? userId = null);
     bool CanUserArchiveProject(Project project, ClaimsPrincipal user, int? userId = null);
+    bool CanUserManageTeam(Project project, ClaimsPrincipal user, int? userId = null);
+    bool CanUserViewEmployeeProfile(int targetUserId, ClaimsPrincipal user, int? userId = null);
     int? GetUserId(ClaimsPrincipal user);
 }
 
@@ -33,11 +34,11 @@ public class ProjectScopingService : IProjectScopingService
 
         if (user.IsInRole("Employee"))
         {
-            // Spec 4.2 / 4.4: Employees see only projects they are or were assigned to.
-            // Extension point for Week 3 assignments: for now, projects where they are Lead or explicitly assigned.
+            // Spec 4.2 / 4.3: Employees see only projects they are or were assigned to (or lead).
             if (userId.HasValue)
             {
-                return query.Where(p => p.LeadId == userId.Value);
+                var uid = userId.Value;
+                return query.Where(p => p.LeadId == uid || p.ProjectAssignments.Any(pa => pa.UserId == uid));
             }
             return query.Where(_ => false);
         }
@@ -57,7 +58,9 @@ public class ProjectScopingService : IProjectScopingService
 
         if (user.IsInRole("Employee"))
         {
-            return userId.HasValue && project.LeadId == userId.Value;
+            return userId.HasValue &&
+                   (project.LeadId == userId.Value ||
+                    project.ProjectAssignments.Any(pa => pa.UserId == userId.Value));
         }
 
         return false;
@@ -86,5 +89,29 @@ public class ProjectScopingService : IProjectScopingService
     {
         // Spec 4.2: Same authorization rules as editing
         return CanUserEditProject(project, user, userId);
+    }
+
+    public bool CanUserManageTeam(Project project, ClaimsPrincipal user, int? userId = null)
+    {
+        // Spec 4.3: Admin on all projects; Manager on projects they lead; Employee and Viewer read-only
+        return CanUserEditProject(project, user, userId);
+    }
+
+    public bool CanUserViewEmployeeProfile(int targetUserId, ClaimsPrincipal user, int? userId = null)
+    {
+        userId ??= GetUserId(user);
+
+        // Spec 4.3: Admin and Manager see any profile; Viewer read-only; Employee sees their own profile only
+        if (user.IsInRole("Admin") || user.IsInRole("Manager") || user.IsInRole("Viewer"))
+        {
+            return true;
+        }
+
+        if (user.IsInRole("Employee"))
+        {
+            return userId.HasValue && userId.Value == targetUserId;
+        }
+
+        return false;
     }
 }

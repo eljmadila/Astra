@@ -17,6 +17,7 @@ public class ProjectsController : Controller
     private readonly ApplicationDbContext _context;
     private readonly IProjectScopingService _scopingService;
     private readonly IProjectCodeGenerator _codeGenerator;
+    private readonly ITeamAssignmentService _teamAssignmentService;
     private readonly IAuditService _auditService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<ProjectsController> _logger;
@@ -25,6 +26,7 @@ public class ProjectsController : Controller
         ApplicationDbContext context,
         IProjectScopingService scopingService,
         IProjectCodeGenerator codeGenerator,
+        ITeamAssignmentService teamAssignmentService,
         IAuditService auditService,
         UserManager<ApplicationUser> userManager,
         ILogger<ProjectsController> logger)
@@ -32,6 +34,7 @@ public class ProjectsController : Controller
         _context = context;
         _scopingService = scopingService;
         _codeGenerator = codeGenerator;
+        _teamAssignmentService = teamAssignmentService;
         _auditService = auditService;
         _userManager = userManager;
         _logger = logger;
@@ -59,6 +62,7 @@ public class ProjectsController : Controller
             .Include(p => p.Lead)
             .Include(p => p.ProjectClients)
                 .ThenInclude(pc => pc.Client)
+            .Include(p => p.ProjectAssignments)
             .AsNoTracking()
             .AsQueryable();
 
@@ -74,7 +78,6 @@ public class ProjectsController : Controller
         {
             scopedQuery = scopedQuery.Where(p => p.IsArchived);
         }
-        // "all" displays both active and archived
 
         // 3. Search across Code, Name, Description
         if (!string.IsNullOrWhiteSpace(search))
@@ -181,7 +184,6 @@ public class ProjectsController : Controller
             };
         }).ToList();
 
-        // Dropdown Filter Options
         var clientOptions = await _context.Clients
             .AsNoTracking()
             .OrderBy(c => c.Name)
@@ -214,13 +216,23 @@ public class ProjectsController : Controller
     }
 
     // GET: /Projects/Details/5
-    public async Task<IActionResult> Details(int id)
+    public async Task<IActionResult> Details(
+        int id,
+        string? tab = "overview",
+        bool showPast = false,
+        DateOnly? asOfDate = null)
     {
         var project = await _context.Projects
             .Include(p => p.Lead)
             .Include(p => p.CreatedBy)
             .Include(p => p.ProjectClients)
                 .ThenInclude(pc => pc.Client)
+            .Include(p => p.ProjectAssignments)
+                .ThenInclude(pa => pa.User)
+            .Include(p => p.ProjectAssignments)
+                .ThenInclude(pa => pa.RoleOnProject)
+            .Include(p => p.ProjectAssignments)
+                .ThenInclude(pa => pa.CreatedBy)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -235,7 +247,57 @@ public class ProjectsController : Controller
             return NotFound();
         }
 
-        // Retrieve Recent Audit Logs for this project
+        var activeTab = (!string.IsNullOrWhiteSpace(tab) && tab.Equals("team", StringComparison.OrdinalIgnoreCase)) ||
+                        showPast ||
+                        asOfDate.HasValue
+            ? "team"
+            : "overview";
+
+        var currentTeam = project.ProjectAssignments
+            .Where(pa => pa.EndDate == null)
+            .OrderByDescending(pa => pa.UserId == project.LeadId)
+            .ThenBy(pa => pa.StartDate)
+            .ThenBy(pa => pa.User.Name)
+            .ToList();
+
+        var pastMembers = project.ProjectAssignments
+            .Where(pa => pa.EndDate != null)
+            .OrderByDescending(pa => pa.EndDate)
+            .ThenBy(pa => pa.User.Name)
+            .ToList();
+
+        List<ProjectAssignment>? pointInTimeTeam = null;
+        if (asOfDate.HasValue)
+        {
+            pointInTimeTeam = await _teamAssignmentService.GetTeamOnAsync(id, asOfDate.Value);
+        }
+
+        var activeUserIds = currentTeam.Select(pa => pa.UserId).ToHashSet();
+
+        // Only active users can be assigned; deactivated users hidden from pickers by default
+        var availableEmployees = await _context.Users
+            .AsNoTracking()
+            .Where(u => u.IsActive && !activeUserIds.Contains(u.Id))
+            .OrderBy(u => u.Name)
+            .Select(u => new SelectListItem
+            {
+                Value = u.Id.ToString(),
+                Text = $"{u.Name} ({u.Department})"
+            })
+            .ToListAsync();
+
+        var activeProjectRoles = await _context.ProjectRoles
+            .AsNoTracking()
+            .Where(r => r.IsActive)
+            .OrderBy(r => r.Name == "Lead" ? 0 : 1)
+            .ThenBy(r => r.Name)
+            .Select(r => new SelectListItem
+            {
+                Value = r.Id.ToString(),
+                Text = r.Name
+            })
+            .ToListAsync();
+
         var auditLogs = await _context.AuditLogs
             .Include(a => a.User)
             .Where(a => a.Entity == "Project" && a.EntityId == id.ToString())
@@ -243,15 +305,171 @@ public class ProjectsController : Controller
             .Take(10)
             .ToListAsync();
 
+        var requiresOverride = project.IsArchived ||
+                               project.Status == ProjectStatus.Completed ||
+                               project.Status == ProjectStatus.Cancelled;
+
         var model = new ProjectDetailsViewModel
         {
             Project = project,
             CanEdit = _scopingService.CanUserEditProject(project, User, CurrentUserId),
             CanArchive = _scopingService.CanUserArchiveProject(project, User, CurrentUserId),
+            CanManageTeam = _scopingService.CanUserManageTeam(project, User, CurrentUserId),
+            IsAdmin = User.IsInRole("Admin"),
+            CanViewEmployeeProfiles = User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Viewer"),
+            CurrentUserId = CurrentUserId,
+            ActiveTab = activeTab,
+            ShowPastMembers = showPast,
+            PointInTimeDate = asOfDate,
+            CurrentTeam = currentTeam,
+            PastMembers = pastMembers,
+            PointInTimeTeam = pointInTimeTeam,
+            AvailableEmployees = availableEmployees,
+            ActiveProjectRoles = activeProjectRoles,
+            RequiresAdminOverrideForAssign = requiresOverride,
             RecentAuditLogs = auditLogs
         };
 
         return View(model);
+    }
+
+    // POST: /Projects/AssignTeamMembers
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignTeamMembers(AssignTeamMembersInputModel model)
+    {
+        var project = await _context.Projects
+            .Include(p => p.ProjectAssignments)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == model.ProjectId);
+
+        if (project is null)
+        {
+            return NotFound();
+        }
+
+        if (!_scopingService.CanUserViewProject(project, User, CurrentUserId))
+        {
+            return NotFound();
+        }
+
+        if (!_scopingService.CanUserManageTeam(project, User, CurrentUserId))
+        {
+            return Forbid();
+        }
+
+        var requests = new List<MemberAssignmentRequest>();
+        var count = Math.Min(model.UserIds.Count, Math.Min(model.RoleOnProjectIds.Count, model.StartDates.Count));
+
+        for (var i = 0; i < count; i++)
+        {
+            if (model.UserIds[i] > 0 && model.RoleOnProjectIds[i] > 0)
+            {
+                requests.Add(new MemberAssignmentRequest(
+                    model.UserIds[i],
+                    model.RoleOnProjectIds[i],
+                    model.StartDates[i]));
+            }
+        }
+
+        var result = await _teamAssignmentService.AssignMembersAsync(
+            model.ProjectId,
+            requests,
+            CurrentUserId ?? project.LeadId,
+            User.IsInRole("Admin"),
+            model.AdminOverrideReason);
+
+        if (!result.Succeeded)
+        {
+            TempData["ErrorMessage"] = result.ErrorMessage;
+            return RedirectToAction(nameof(Details), new { id = model.ProjectId, tab = "team" });
+        }
+
+        TempData["SuccessMessage"] = $"{requests.Count} team member(s) assigned to '{project.Code}' successfully.";
+        return RedirectToAction(nameof(Details), new { id = model.ProjectId, tab = "team" });
+    }
+
+    // POST: /Projects/RemoveTeamMember
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveTeamMember(RemoveTeamMemberInputModel model)
+    {
+        var project = await _context.Projects
+            .Include(p => p.ProjectAssignments)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == model.ProjectId);
+
+        if (project is null)
+        {
+            return NotFound();
+        }
+
+        if (!_scopingService.CanUserViewProject(project, User, CurrentUserId))
+        {
+            return NotFound();
+        }
+
+        if (!_scopingService.CanUserManageTeam(project, User, CurrentUserId))
+        {
+            return Forbid();
+        }
+
+        var result = await _teamAssignmentService.RemoveMemberAsync(
+            model.ProjectId,
+            model.AssignmentId,
+            model.EffectiveEndDate,
+            model.Reason,
+            CurrentUserId ?? project.LeadId);
+
+        if (!result.Succeeded)
+        {
+            TempData["ErrorMessage"] = result.ErrorMessage;
+            return RedirectToAction(nameof(Details), new { id = model.ProjectId, tab = "team" });
+        }
+
+        TempData["SuccessMessage"] = "Team member removed and archived to historical project roster.";
+        return RedirectToAction(nameof(Details), new { id = model.ProjectId, tab = "team", showPast = true });
+    }
+
+    // POST: /Projects/ChangeTeamMemberRole
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeTeamMemberRole(ChangeTeamMemberRoleInputModel model)
+    {
+        var project = await _context.Projects
+            .Include(p => p.ProjectAssignments)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == model.ProjectId);
+
+        if (project is null)
+        {
+            return NotFound();
+        }
+
+        if (!_scopingService.CanUserViewProject(project, User, CurrentUserId))
+        {
+            return NotFound();
+        }
+
+        if (!_scopingService.CanUserManageTeam(project, User, CurrentUserId))
+        {
+            return Forbid();
+        }
+
+        var result = await _teamAssignmentService.ChangeRoleOnProjectAsync(
+            model.ProjectId,
+            model.AssignmentId,
+            model.NewRoleOnProjectId,
+            CurrentUserId ?? project.LeadId);
+
+        if (!result.Succeeded)
+        {
+            TempData["ErrorMessage"] = result.ErrorMessage;
+            return RedirectToAction(nameof(Details), new { id = model.ProjectId, tab = "team" });
+        }
+
+        TempData["SuccessMessage"] = "Team member role updated successfully.";
+        return RedirectToAction(nameof(Details), new { id = model.ProjectId, tab = "team" });
     }
 
     // GET: /Projects/Create
@@ -287,13 +505,11 @@ public class ProjectsController : Controller
         var isAdmin = User.IsInRole("Admin");
         model.IsCodeEditable = isAdmin;
 
-        // If non-admin manager, force suggested code if empty or unprivileged
         if (!isAdmin && string.IsNullOrWhiteSpace(model.Code))
         {
             model.Code = await _codeGenerator.GenerateNextCodeAsync();
         }
 
-        // Validate unique code
         if (!string.IsNullOrWhiteSpace(model.Code))
         {
             var codeExists = await _context.Projects.AnyAsync(p => p.Code == model.Code.Trim());
@@ -303,7 +519,6 @@ public class ProjectsController : Controller
             }
         }
 
-        // Validate lead eligibility (must be active Admin or Manager)
         var leadUser = await _context.Users.FindAsync(model.LeadId);
         if (leadUser is null || !leadUser.IsActive)
         {
@@ -319,13 +534,11 @@ public class ProjectsController : Controller
             }
         }
 
-        // Spec Requirement: Completed status implies 100% progress
         if (model.Status == ProjectStatus.Completed && model.ProgressPercent < 100)
         {
             model.ProgressPercent = 100;
         }
 
-        // Spec Requirement: Completed or Cancelled requires Actual End Date
         if (model.Status is ProjectStatus.Completed or ProjectStatus.Cancelled && !model.ActualEndDate.HasValue)
         {
             model.ActualEndDate = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -374,6 +587,13 @@ public class ProjectsController : Controller
         _context.Projects.Add(project);
         await _context.SaveChangesAsync();
 
+        // Spec 4.3 / Week 3 Task 3: The project lead appears on the team as a member with the Lead role
+        await _teamAssignmentService.EnsureLeadOnTeamAsync(
+            project.Id,
+            project.LeadId,
+            project.StartDate,
+            currentUserId);
+
         await _auditService.LogAsync(
             action: "Created",
             entity: "Project",
@@ -390,7 +610,7 @@ public class ProjectsController : Controller
             userId: currentUserId
         );
 
-        TempData["Success"] = $"Project '{project.Code} — {project.Name}' created successfully.";
+        TempData["SuccessMessage"] = $"Project '{project.Code} — {project.Name}' created successfully.";
         return RedirectToAction(nameof(Details), new { id = project.Id });
     }
 
@@ -399,6 +619,7 @@ public class ProjectsController : Controller
     {
         var project = await _context.Projects
             .Include(p => p.ProjectClients)
+            .Include(p => p.ProjectAssignments)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (project is null)
@@ -428,6 +649,7 @@ public class ProjectsController : Controller
             Name = project.Name,
             Description = project.Description,
             LeadId = project.LeadId,
+            KeepPreviousLeadOnTeam = false,
             SelectedClientIds = project.ProjectClients.Select(pc => pc.ClientId).ToList(),
             Status = project.Status,
             Priority = project.Priority,
@@ -455,6 +677,7 @@ public class ProjectsController : Controller
 
         var project = await _context.Projects
             .Include(p => p.ProjectClients)
+            .Include(p => p.ProjectAssignments)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (project is null)
@@ -475,7 +698,6 @@ public class ProjectsController : Controller
         var isAdmin = User.IsInRole("Admin");
         model.IsCodeEditable = isAdmin;
 
-        // If admin altered code, validate unique
         if (isAdmin && model.Code != project.Code)
         {
             var codeExists = await _context.Projects.AnyAsync(p => p.Id != id && p.Code == model.Code.Trim());
@@ -485,7 +707,6 @@ public class ProjectsController : Controller
             }
         }
 
-        // Validate lead eligibility
         var leadUser = await _context.Users.FindAsync(model.LeadId);
         if (leadUser is null || !leadUser.IsActive)
         {
@@ -501,7 +722,6 @@ public class ProjectsController : Controller
             }
         }
 
-        // Spec Requirement: Reopening a Completed project clears actual end date and logs it
         var wasCompleted = project.Status == ProjectStatus.Completed;
         var isNowReopened = wasCompleted && model.Status != ProjectStatus.Completed && model.Status != ProjectStatus.Cancelled;
 
@@ -510,13 +730,11 @@ public class ProjectsController : Controller
             model.ActualEndDate = null;
         }
 
-        // Completed offers to set 100%
         if (model.Status == ProjectStatus.Completed && model.ProgressPercent < 100)
         {
             model.ProgressPercent = 100;
         }
 
-        // Completed or Cancelled requires Actual End Date
         if (model.Status is ProjectStatus.Completed or ProjectStatus.Cancelled && !model.ActualEndDate.HasValue)
         {
             model.ActualEndDate = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -528,6 +746,8 @@ public class ProjectsController : Controller
             model.LeadOptions = await GetEligibleLeadsAsync();
             return View(model);
         }
+
+        var oldLeadId = project.LeadId;
 
         try
         {
@@ -553,18 +773,15 @@ public class ProjectsController : Controller
             project.ActualEndDate = model.ActualEndDate;
             project.UpdatedAt = DateTime.UtcNow;
 
-            // Sync Client Linkages
             var currentClientIds = project.ProjectClients.Select(pc => pc.ClientId).ToHashSet();
             var newClientIds = (model.SelectedClientIds ?? []).Distinct().ToHashSet();
 
-            // Remove unselected
             var toRemove = project.ProjectClients.Where(pc => !newClientIds.Contains(pc.ClientId)).ToList();
             foreach (var pc in toRemove)
             {
                 project.ProjectClients.Remove(pc);
             }
 
-            // Add newly selected
             foreach (var cid in newClientIds.Where(cid => !currentClientIds.Contains(cid)))
             {
                 project.ProjectClients.Add(new ProjectClient
@@ -577,7 +794,27 @@ public class ProjectsController : Controller
 
             await _context.SaveChangesAsync();
 
-            // Log special audit if reopened
+            var operatorId = CurrentUserId ?? project.LeadId;
+
+            // Spec 4.3 / Week 3 Task 3: Changing project lead is logged; old lead stays on team only if explicitly kept
+            if (oldLeadId != project.LeadId)
+            {
+                await _teamAssignmentService.HandleLeadChangeAsync(
+                    project.Id,
+                    oldLeadId,
+                    project.LeadId,
+                    model.KeepPreviousLeadOnTeam,
+                    operatorId);
+            }
+            else
+            {
+                await _teamAssignmentService.EnsureLeadOnTeamAsync(
+                    project.Id,
+                    project.LeadId,
+                    project.StartDate,
+                    operatorId);
+            }
+
             if (isNowReopened)
             {
                 await _auditService.LogAsync(
@@ -606,14 +843,13 @@ public class ProjectsController : Controller
                 userId: CurrentUserId
             );
 
-            TempData["Success"] = $"Project '{project.Code}' updated successfully.";
+            TempData["SuccessMessage"] = $"Project '{project.Code}' updated successfully.";
             return RedirectToAction(nameof(Details), new { id = project.Id });
         }
         catch (DbUpdateConcurrencyException)
         {
             _logger.LogWarning("Concurrency conflict detected while editing Project Id {ProjectId}", id);
 
-            // Fetch current database state to display side-by-side friendly conflict resolution
             var currentDbProject = await _context.Projects
                 .Include(p => p.Lead)
                 .Include(p => p.ProjectClients)
@@ -638,7 +874,10 @@ public class ProjectsController : Controller
     [HttpPost]
     public async Task<IActionResult> Archive(int id)
     {
-        var project = await _context.Projects.FindAsync(id);
+        var project = await _context.Projects
+            .Include(p => p.ProjectAssignments)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (project is null)
         {
             return NotFound();
@@ -666,7 +905,7 @@ public class ProjectsController : Controller
             userId: CurrentUserId
         );
 
-        TempData["Success"] = $"Project '{project.Code}' archived successfully.";
+        TempData["SuccessMessage"] = $"Project '{project.Code}' archived successfully.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -674,7 +913,10 @@ public class ProjectsController : Controller
     [HttpPost]
     public async Task<IActionResult> Restore(int id)
     {
-        var project = await _context.Projects.FindAsync(id);
+        var project = await _context.Projects
+            .Include(p => p.ProjectAssignments)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (project is null)
         {
             return NotFound();
@@ -702,7 +944,7 @@ public class ProjectsController : Controller
             userId: CurrentUserId
         );
 
-        TempData["Success"] = $"Project '{project.Code}' restored from archive.";
+        TempData["SuccessMessage"] = $"Project '{project.Code}' restored from archive.";
         return RedirectToAction(nameof(Details), new { id = project.Id });
     }
 
@@ -719,7 +961,6 @@ public class ProjectsController : Controller
 
     private async Task<List<SelectListItem>> GetEligibleLeadsAsync()
     {
-        // Eligible leads: active users in Manager or Admin roles
         var adminRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
         var managerRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Manager");
 

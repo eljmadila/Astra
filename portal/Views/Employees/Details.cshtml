@@ -1,0 +1,295 @@
+@model AspnetCoreMvcFull.ViewModels.Employees.EmployeeProfileViewModel
+@{
+  ViewData["Title"] = $"{Model.Name} — Employee Profile";
+}
+
+<div class="row">
+  <!-- Breadcrumb & Header -->
+  <div class="col-12 mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h4 class="fw-bold mb-1">
+          <a asp-action="Index" class="text-muted fw-light">Staff Directory</a> /
+          <span>@Model.Name</span>
+        </h4>
+        <p class="text-muted mb-0 small">Employee allocation profile, current project engagements, and historical project timeline.</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+          <i class="bx bx-arrow-back me-1"></i> Back to Directory
+        </a>
+        @if (Model.IsAdmin)
+        {
+          <a asp-controller="Users" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+            <i class="bx bx-edit me-1"></i> Manage Account
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (!Model.IsActive)
+  {
+    <div class="col-12 mb-3">
+      <div class="alert alert-secondary d-flex align-items-center mb-0" role="alert">
+        <i class="bx bx-user-x fs-4 me-2"></i>
+        <div>
+          This user account is currently <strong>Inactive (Deactivated)</strong>. The user cannot sign in or receive new assignments,
+          but their historical project memberships and audit records are permanently preserved.
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Left Column: Profile Summary Card -->
+  <div class="col-lg-4 col-12 mb-4">
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-body text-center pt-4 pb-3">
+        <div class="avatar avatar-xl mx-auto mb-3">
+          <span class="avatar-initial rounded-circle @(Model.IsActive ? "bg-label-primary" : "bg-label-secondary") fw-bold fs-2">
+            @(Model.Name.Length > 0 ? Model.Name[0].ToString().ToUpper() : "E")
+          </span>
+        </div>
+        <h5 class="fw-bold mb-1">@Model.Name</h5>
+        <p class="text-muted small mb-2">@Model.Email</p>
+
+        <div class="d-flex justify-content-center gap-2 flex-wrap mb-3">
+          @switch (Model.SystemRole)
+          {
+            case "Admin":
+              <span class="badge bg-label-danger">System Role: Admin</span>
+              break;
+            case "Manager":
+              <span class="badge bg-label-primary">System Role: Manager</span>
+              break;
+            case "Viewer":
+              <span class="badge bg-label-info">System Role: Viewer</span>
+              break;
+            default:
+              <span class="badge bg-label-secondary">System Role: Employee</span>
+              break;
+          }
+
+          @if (Model.IsActive)
+          {
+            <span class="badge bg-label-success">Active Account</span>
+          }
+          else
+          {
+            <span class="badge bg-secondary">Inactive Account</span>
+          }
+        </div>
+
+        <div class="row border-top pt-3 text-center">
+          <div class="col-6 border-end">
+            <h4 class="fw-bold text-primary mb-0">@Model.CurrentProjects.Count</h4>
+            <small class="text-muted">Active Projects</small>
+          </div>
+          <div class="col-6">
+            <h4 class="fw-bold text-secondary mb-0">@Model.PastProjects.Count</h4>
+            <small class="text-muted">Past Projects</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer bg-light">
+        <ul class="list-unstyled mb-0 small">
+          <li class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Department:</span>
+            <span class="fw-semibold">@Model.Department</span>
+          </li>
+          <li class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Corporate Email:</span>
+            <span class="fw-semibold">@Model.Email</span>
+          </li>
+          <li class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Member Since:</span>
+            <span class="fw-semibold">@Model.CreatedAt.ToString("MMM dd, yyyy")</span>
+          </li>
+          <li class="d-flex justify-content-between">
+            <span class="text-muted">Last Sign-In:</span>
+            <span class="fw-semibold">@(Model.LastLoginAt.HasValue ? Model.LastLoginAt.Value.ToString("MMM dd, yyyy HH:mm") : "Never")</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Current Projects, Past Projects & Open Tasks -->
+  <div class="col-lg-8 col-12">
+    <!-- 1. Current Projects Card -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+        <div>
+          <h6 class="mb-0 fw-bold">
+            <i class="bx bx-briefcase-alt-2 text-primary me-1"></i> Current Project Assignments
+          </h6>
+          <small class="text-muted">Projects where @Model.Name currently holds an active role.</small>
+        </div>
+        <span class="badge bg-primary">@Model.CurrentProjects.Count Active</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive text-nowrap">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Project</th>
+                <th>Client(s)</th>
+                <th>Project Status</th>
+                <th>Role on Project</th>
+                <th>Assigned Since</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (Model.CurrentProjects.Count == 0)
+              {
+                <tr>
+                  <td colspan="5" class="text-center py-4 text-muted">
+                    <i class="bx bx-folder-open fs-3 d-block mb-1"></i>
+                    No active project assignments at this time.
+                  </td>
+                </tr>
+              }
+              else
+              {
+                @foreach (var item in Model.CurrentProjects)
+                {
+                  <tr>
+                    <td>
+                      <a asp-controller="Projects" asp-action="Details" asp-route-id="@item.ProjectId" class="fw-bold font-monospace text-primary d-block">
+                        @item.ProjectCode
+                      </a>
+                      <a asp-controller="Projects" asp-action="Details" asp-route-id="@item.ProjectId" class="small text-body">
+                        @item.ProjectName
+                      </a>
+                      @if (item.IsProjectArchived)
+                      {
+                        <span class="badge bg-label-dark font-size-xs ms-1">Archived</span>
+                      }
+                    </td>
+                    <td class="small">
+                      @(item.ClientNames.Count > 0 ? string.Join(", ", item.ClientNames) : "Internal")
+                    </td>
+                    <td>
+                      @switch (item.ProjectStatus)
+                      {
+                        case AspnetCoreMvcFull.Entities.ProjectStatus.NotStarted:
+                          <span class="badge bg-label-secondary">Not Started</span>
+                          break;
+                        case AspnetCoreMvcFull.Entities.ProjectStatus.InProgress:
+                          <span class="badge bg-label-primary">In Progress</span>
+                          break;
+                        case AspnetCoreMvcFull.Entities.ProjectStatus.OnHold:
+                          <span class="badge bg-label-warning">On Hold</span>
+                          break;
+                        case AspnetCoreMvcFull.Entities.ProjectStatus.Completed:
+                          <span class="badge bg-label-success">Completed</span>
+                          break;
+                        case AspnetCoreMvcFull.Entities.ProjectStatus.Cancelled:
+                          <span class="badge bg-label-danger">Cancelled</span>
+                          break;
+                      }
+                    </td>
+                    <td>
+                      <span class="badge bg-label-primary">@item.RoleOnProject</span>
+                      @if (item.IsProjectLead)
+                      {
+                        <span class="badge bg-label-warning ms-1"><i class="bx bx-crown me-1"></i>Lead</span>
+                      }
+                    </td>
+                    <td>
+                      <span class="fw-semibold">@item.StartDate.ToString("MMM dd, yyyy")</span>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Past Projects Card -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+        <div>
+          <h6 class="mb-0 fw-bold">
+            <i class="bx bx-history text-secondary me-1"></i> Past Project Assignments (Historical Timeline)
+          </h6>
+          <small class="text-muted">Completed or concluded project memberships with role and date range.</small>
+        </div>
+        <span class="badge bg-label-secondary">@Model.PastProjects.Count Historical</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive text-nowrap">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Project</th>
+                <th>Role Held</th>
+                <th>Date Range</th>
+                <th>Reason / Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (Model.PastProjects.Count == 0)
+              {
+                <tr>
+                  <td colspan="4" class="text-center py-4 text-muted small">
+                    No past project assignments recorded yet.
+                  </td>
+                </tr>
+              }
+              else
+              {
+                @foreach (var past in Model.PastProjects)
+                {
+                  <tr>
+                    <td>
+                      <a asp-controller="Projects" asp-action="Details" asp-route-id="@past.ProjectId" class="fw-bold font-monospace text-secondary d-block">
+                        @past.ProjectCode
+                      </a>
+                      <span class="small text-muted">@past.ProjectName</span>
+                    </td>
+                    <td>
+                      <span class="badge bg-label-secondary">@past.RoleOnProject</span>
+                    </td>
+                    <td class="small">
+                      <span class="fw-semibold">@past.StartDate.ToString("MMM dd, yyyy")</span>
+                      <i class="bx bx-right-arrow-alt text-muted mx-1"></i>
+                      <span class="fw-semibold">@(past.EndDate?.ToString("MMM dd, yyyy") ?? "-")</span>
+                    </td>
+                    <td class="small text-muted">
+                      @(string.IsNullOrWhiteSpace(past.RemovalReason) ? "Assignment concluded" : past.RemovalReason)
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Open Tasks Section (Spec 4.3: Empty state until Week 5) -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+        <div>
+          <h6 class="mb-0 fw-bold">
+            <i class="bx bx-check-square text-info me-1"></i> Open Project Tasks
+          </h6>
+          <small class="text-muted">Assigned deliverables across active project engagements.</small>
+        </div>
+        <span class="badge bg-label-info">0 Open Tasks</span>
+      </div>
+      <div class="card-body text-center py-4">
+        <i class="bx bx-task fs-2 text-muted d-block mb-2"></i>
+        <p class="fw-semibold text-secondary mb-1">No Open Tasks Assigned</p>
+        <p class="text-muted small mb-0">
+          Open tasks assigned to @Model.Name will appear here once task and milestone tracking is enabled.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+

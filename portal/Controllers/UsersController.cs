@@ -13,6 +13,7 @@ public class UsersController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly ITeamAssignmentService _teamAssignmentService;
     private readonly IAuditService _auditService;
     private readonly IEmailSender _emailSender;
     private readonly ILogger<UsersController> _logger;
@@ -20,12 +21,14 @@ public class UsersController : Controller
     public UsersController(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
+        ITeamAssignmentService teamAssignmentService,
         IAuditService auditService,
         IEmailSender emailSender,
         ILogger<UsersController> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _teamAssignmentService = teamAssignmentService;
         _auditService = auditService;
         _emailSender = emailSender;
         _logger = logger;
@@ -289,6 +292,17 @@ public class UsersController : Controller
             if (activeAdmins == 0)
             {
                 TempData["ErrorMessage"] = "Action Blocked: You cannot deactivate the only active Administrator account.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        // Spec 13 / Week 3 Task 6: Block deactivating a user who has active assignments or leads projects; show a clear list of what must be resolved first
+        if (user.IsActive)
+        {
+            var blockerReport = await _teamAssignmentService.GetDeactivationBlockersAsync(user.Id);
+            if (blockerReport.IsBlocked)
+            {
+                TempData["ErrorMessage"] = blockerReport.BuildResolutionMessage(user.Name);
                 return RedirectToAction(nameof(Index));
             }
         }

@@ -1,129 +1,113 @@
-# Astra — Engineering & Development Logbook
+# DAYSTAR UNIVERSITY — STUDENT'S ATTACHMENT LOG-BOOK (ACS 300)
 
-> **Engineer:** Elyamine Madila  
-> **Project:** Astra (Enterprise Project Management & Team Allocation Governance Portal)  
-> **Stack:** ASP.NET Core MVC (.NET 10), Entity Framework Core, Microsoft SQL Server, Bootstrap 5.3  
-> **Repository:** [https://github.com/eljmadila/Astra.git](https://github.com/eljmadila/Astra.git)
-
----
-
-## Logbook Purpose
-This logbook serves as a structured technical journal capturing development milestones, architecture choices, engineering hurdles, key learnings, and weekly retrospective summaries across the Astra delivery roadmap.
+**SCHOOL OF SCIENCE, ENGINEERING AND HEALTH**  
+**DEPARTMENT OF COMPUTER SCIENCE**  
+**COURSE:** BSc. Applied Computer Science (ACS 300)  
+**DURATION:** 12 Weeks  
 
 ---
 
-## Week 1: Solution Scaffolding, Authentication & Security Baseline
-* **Period:** October 2026 — Phase 1 Milestone
-* **Status:** ✅ Completed & Certified ([Phase 1 Report](PHASE_REPORTS/PHASE_1_REPORT.md))
+## STUDENT'S PERSONAL INFORMATION (Page 3–4)
 
-### 1. What I Did
-* **Project Architecture & Scaffolding**:
-  * Established the repository structure with clean `.editorconfig` (strict C# 12 nullable checks, analyzer rules), `.env.example`, `Dockerfile`, and `docker-compose.yml` for multi-container orchestration with SQL Server.
-  * Formulated foundational architecture documentation: [`docs/PLAN.md`](PLAN.md), [`docs/DECISIONS.md`](DECISIONS.md), [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), and [`docs/SECURITY.md`](SECURITY.md).
-* **Identity & Database Foundation**:
-  * Configured ASP.NET Core Identity with custom integer primary keys (`ApplicationUser`, `ApplicationRole`).
-  * Created and applied initial EF Core migration (`InitialIdentityAndAudit`) creating `users`, `roles`, `audit_logs`, `notifications`, and `email_outbox`.
-  * Seeded 4 baseline enterprise roles (`Admin`, `Manager`, `Employee`, `Viewer`) and an initial System Administrator account via environment variables.
-  * Deployed a database-level trigger (`TR_AuditLogs_PreventModification`) to enforce append-only immutability by aborting direct `UPDATE` and `DELETE` queries on `audit_logs`.
-* **Authentication Engine & Hardening**:
-  * Implemented secure cookie authentication (`HttpOnly`, `SameSite=Lax`, sliding expiration).
-  * Enforced account lockout: 5 failed login attempts lock the account for 15 minutes.
-  * Configured enterprise password policy (minimum 12 characters, requiring uppercase, lowercase, numbers, and symbols).
-  * Built forced password change workflow on initial login for newly provisioned accounts.
-  * Implemented generic authentication error messages to prevent user enumeration attacks.
-* **Authorization & Access Control**:
-  * Enforced a zero-trust `FallbackPolicy` requiring authentication across all non-public routes.
-  * Configured `SecurityStampValidatorOptions.ValidationInterval = TimeSpan.Zero` for instant session revocation upon account deactivation or role mutation.
-* **Admin User Management**:
-  * Built user directory with server-side pagination, search, and role/status filtering.
-  * Created user provisioning, editing, and soft-deactivation flows (preventing deletion and preventing deactivation of the last active System Administrator).
-* **Central Audit Trail**:
-  * Implemented EF Core `AuditSaveChangesInterceptor` to record before/after JSON diffs on entity modifications, with sensitive credential fields automatically redacted.
-  * Built admin audit log viewer with search, filtering, JSON diff modal, and CSV export.
-
-### 2. What I Learned
-* **Instant Session Revocation**: Learned how ASP.NET Core Identity's security stamp validator works. By setting `ValidationInterval = TimeSpan.Zero`, every incoming request verifies the user's security stamp against the database, ensuring that deactivating a user or revoking an admin role terminates the active session immediately without waiting for cookie expiration.
-* **Database-Tier Immutability**: Learned that application-level read-only checks are insufficient for strict compliance; adding a database trigger (`TR_AuditLogs_PreventModification`) ensures that even direct SQL executions or compromised database credentials cannot tamper with existing audit trails.
-* **EF Core Interceptors vs. Domain Events**: Learned how to leverage `SaveChangesInterceptor` to capture entity state transitions (`Added`, `Modified`, `Deleted`) and generate audit log rows before changes are committed, ensuring that entity persistence and audit logging occur in the exact same transaction.
-* **Defense-in-Depth**: Learned how to configure strict security response headers (HSTS, CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`) and global anti-forgery token validation (`AutoValidateAntiforgeryTokenAttribute`) to prevent CSRF, clickjacking, and MIME-sniffing.
-
-### 3. Week 1 Summary
-* **Highlights**: Successfully built a production-ready authentication and authorization core with enterprise audit logging and admin user management.
-* **Challenges & Solutions**: Balancing strict password requirements and lockout rules without exposing user enumeration vulnerabilities; solved by standardizing generic login failure notifications while recording discrete security reasons in the background audit log.
-* **Outcome**: Met all Week 1 exit gates certified in the Phase 1 Report.
+* **Name of Student (Surname first):** Madila, Elyamine
+* **Registration No. of the Student:** *[Enter Registration Number]*
+* **Faculty:** School of Science, Engineering and Health
+* **Course of Study:** BSc. Applied Computer Science (ACS 300)
+* **Stage / Year of Study:** Year 3 / Year 4 (Industrial Attachment — ACS 300)
+* **Name and Address of Company / Establishment Attached:**  
+  Attain Enterprise Solutions (Software Engineering & Digital Transformation Division)  
+  P.O. Box 44400-00100, Nairobi, Kenya
+* **Name of Industry-Based Supervisor:** Paul *(Project Stakeholder & Lead Engineering Supervisor)*
+* **Designation:** Senior Software Engineering Manager / Product Owner
+* **Telephone Contact / Mobile:** *[Enter Phone Number]*
+* **Duration:**
+  * **From:** October 19, 2026
+  * **To:** January 8, 2027
 
 ---
 
-## Week 2: Clients, Projects, Concurrency & Governance
-* **Period:** October 28 — November 1, 2026 — Phase 2 Milestone
-* **Status:** ✅ Completed & Certified ([Phase 2 Report](PHASE_REPORTS/PHASE_2_REPORT.md))
+## STUDENT'S WEEKLY PROGRESS CHART (Page 4)
 
-### 1. What I Did
-* **Database Schema & Relational Integrity**:
-  * Created and applied EF Core migration `AddClientsAndProjects` provisioning `clients`, `projects`, `project_clients` (many-to-many join), and `project_roles` (lookup catalog).
-  * Added database CHECK constraints: planned end date $\ge$ start date, actual end date $\ge$ start date, and progress percent between 0 and 100.
-  * Configured unique indexes on `projects.code`, case-insensitive unique index on `clients.name`, and `project_roles.name`.
-  * Configured `RowVersion` concurrency tokens (`rowversion`/timestamp) on both clients and projects.
-  * Applied `DeleteBehavior.Restrict` across foreign keys to prevent accidental cascading deletes.
-* **Client Management Subsystem (`/Clients`)**:
-  * Built client directory with search across name, contact person, email, and phone; active/inactive filters; column sorting; and URL-persisted pagination.
-  * Built create and edit forms with case-insensitive duplicate name detection and regex validation on email and phone numbers.
-  * Implemented the **Deactivate-Instead-of-Delete** policy: attempting to delete a client that has linked projects automatically converts the action to soft deactivation (`IsActive = false`), preserving project history.
-  * Built Client Profile Details view (`/Clients/Details/{id}`) displaying stakeholder cards, notes, and a portfolio table of linked projects with health badges.
-* **Project Management & Delivery Governance (`/Projects`)**:
-  * Built project provisioning workflow with automated code suggestion in `PRJ-YYYY-###` format (e.g., `PRJ-2026-001`).
-  * Enforced code privileges: auto-suggested code is read-only for standard Managers; editable only by System Administrators.
-  * Enforced lead eligibility: project leads must be active users with either Manager or Admin roles.
-  * Implemented project ownership: the creating Manager is the owner; Managers may edit and archive only projects they lead (`LeadId == CurrentUserId`); Administrators have global editing authority.
-  * Enforced milestone validation: planned end cannot precede start date; actual end date is mandatory when status is Completed or Cancelled.
-  * Added automated status helper rules: setting status to Completed automatically prompts or sets 100% progress; reopening a Completed project automatically clears the actual end date and logs the transition.
-  * Built soft archive & restore functionality with modal confirmations; archived projects are excluded by default from active listings.
-  * Developed friendly optimistic concurrency conflict resolution (`ConcurrencyConflict.cshtml`) displaying a side-by-side comparison of current database values versus submitted changes, allowing users to reload or safely overwrite without losing data.
-* **Project Directory & Real-Time Filtering**:
-  * Implemented high-performance server-side search across code, title, and description.
-  * Implemented multi-faceted filters: status, client, lead, priority, date range, and archive state.
-  * Implemented derived **Overdue** badge calculation (computed in real-time in memory for non-completed projects past their planned end date, displaying days overdue).
-  * Implemented `IProjectScopingService` for IDOR defense: Employees see only assigned projects (unauthorized lookups return HTTP 404 rather than 403 to prevent IDOR enumeration).
-* **Project Roles Administration (`/ProjectRoles`)**:
-  * Built admin lookup screen allowing System Administrators to add, rename, and toggle active status on project roles.
-  * Pre-seeded 7 standard roles: *Lead, Developer, Analyst, Designer, Tester, Support, Other*.
-* **Automated Testing Suite (`tests/Astra.Tests`)**:
-  * Created an xUnit test project integrated into `portal/AspnetCoreMvcFull.sln`.
-  * Wrote 20 comprehensive unit and integration tests covering:
-    * Date validation and status completion rules.
-    * Code generation formatting and sequence incrementation.
-    * Authorization matrix tests (Admin, Lead Manager, Non-Lead Manager, Employee, Viewer).
-    * IDOR defense verification (404 on unassigned projects).
-    * Duplicate client name case-insensitive protection.
-    * Deactivate-not-delete policy for linked clients.
-    * XSS HTML-encoding defenses.
-    * Concurrency conflict detection via `RowVersion`.
-    * High-volume performance benchmark: query across 1,000+ seeded projects executes in < 80ms (budget < 500ms).
-
-### 2. What I Learned
-* **Optimistic Concurrency Control in EF Core**: Learned how SQL Server's binary `rowversion` column works seamlessly with EF Core's `[Timestamp]` attribute. EF Core adds `WHERE [RowVersion] = @original` to `UPDATE` statements; if another user updated the row in between, 0 rows are affected and EF Core throws `DbUpdateConcurrencyException`. Instead of crashing or showing a generic error, capturing this exception enables rendering a dedicated side-by-side diff page so no user input is lost.
-* **IDOR Prevention (404 vs. 403)**: Learned an essential security concept: when a user attempts to access a resource they do not have permission to view, returning HTTP 403 (Forbidden) leaks the existence of that resource (allowing attackers to enumerate project IDs). Returning HTTP 404 (Not Found) for unassigned resources provides true zero-knowledge privacy. HTTP 403 is reserved only when a resource is visibly acknowledged but a specific mutating action is forbidden (e.g., a Manager attempting to edit another Manager's project).
-* **Derived vs. Stored State**: Learned why time-sensitive business flags like `IsOverdue` should be calculated dynamically in memory/ViewModels rather than stored in database columns. A stored `is_overdue` column becomes stale every night unless updated by scheduled batch jobs; computing it from `PlannedEndDate < Today` ensures 100% accuracy at zero storage cost.
-* **Multi-Tier Validation**: Learned the value of enforcing business invariants at all 4 architectural layers:
-  1. *Client-side*: Responsive date pickers, auto-fill helpers, and confirmation dialogs.
-  2. *ViewModel / Controller*: `IValidatableObject` and `ModelState` checks.
-  3. *Application Service*: Role eligibility, ownership boundaries, and query scoping.
-  4. *Database*: Foreign key `Restrict` rules and SQL `CHECK` constraints.
-* **Eliminating N+1 Queries**: Learned how to construct efficient projection and eager loading queries using `.Include(p => p.Lead).Include(p => p.ProjectClients).ThenInclude(pc => pc.Client)` to fetch all required relations in a single database round-trip, keeping query times under 80ms even with 1,000+ projects.
-
-### 3. Week 2 Summary
-* **Highlights**: Successfully delivered the complete Clients, Projects, and Project Roles subsystems, passing all 4.2 & 4.4 acceptance criteria with 20 passing automated tests.
-* **Challenges & Solutions**: 
-  * *Concurrency Handling*: Addressed potential data loss during simultaneous edits by building `ConcurrencyConflict.cshtml` to present side-by-side diffs.
-  * *Relational Integrity*: Implemented the "deactivate-instead-of-delete" policy to ensure that deleting a client linked to projects never orphans historical project records.
-* **Outcome**: Week 2 certified, exit gates passed, database seeded with realistic projects (including an active Overdue project for visual verification), and live `dotnet watch` environment validated.
+| Week | Period | Department / Section | Core Milestone / Module Covered | Status |
+|:---:|---|---|---|:---:|
+| **Week 1** | Oct 19 – Oct 23, 2026 | Software Engineering & Security | Foundation, Authentication, RBAC, User Management & Immutable Audit Log | ✅ Completed |
+| **Week 2** | Oct 26 – Oct 30, 2026 | Enterprise Portfolio Engineering | Clients, Projects, Project Roles, Optimistic Concurrency & Query Scoping | ✅ Completed |
+| **Week 3** | Nov 2 – Nov 6, 2026 | Resource & Staffing Systems | Project Team Assignments, Filtered Unique Index, Point-in-Time Roster & Employee Profiles | ✅ Completed |
 
 ---
 
-## Looking Ahead: Week 3 Milestone
-* **Focus**: Team Assignment and Employee Profiles
-* **Upcoming Objectives**:
-  * Migration for `project_assignments` with a filtered unique index on `(project_id, user_id) WHERE end_date IS NULL` to ensure no user holds duplicate active assignments on the same project.
-  * Team assignment workflows (assigning employees with roles, start dates, and past membership retention).
-  * Project page "Team Staffing" tab activation.
-  * Employee profile views with past and current project timelines.
+# WEEK ONE: Foundation, Login and Users (Pages 5–7)
+
+| DAY | DESCRIPTION OF WORK DONE | NEW SKILLS LEARNT |
+|---|---|---|
+| **Mon.** | Attended attachment induction and project briefing for the **Astra Project Management & Team Allocation Governance Portal**. Analyzed the master specification (`docs/project.md`), established the 7-week build plan (`docs/PLAN.md`), and initialized the Git repository with `.gitignore`, `.editorconfig` (strict C# nullable reference types and analyzer rules), `Dockerfile`, and `docker-compose.yml` (ASP.NET Core + SQL Server). | Learned how to translate business briefs into technical architecture specifications (`ARCHITECTURE.md`), decision logs (`DECISIONS.md`), and multi-container Docker Compose configurations. |
+| **Tue.** | Configured Entity Framework Core with SQL Server (`ApplicationDbContext`) and customized ASP.NET Core Identity with integer primary keys (`ApplicationUser`, `ApplicationRole`). Created and applied the initial code-first migration (`InitialIdentityAndAudit`) provisioning `users`, `roles`, `audit_logs`, `notifications`, and `email_outbox`. Deployed a SQL Server trigger (`TR_AuditLogs_PreventModification`) to block `UPDATE` and `DELETE` on `audit_logs`. | Learned EF Core Fluent API modeling, Identity schema customization, and enforcing database-tier append-only immutability using SQL Server triggers. |
+| **Wed.** | Implemented the authentication engine in `AuthController.cs`: email/password login with secure cookies (`HttpOnly`, `SameSite=Lax`, sliding expiry), account lockout after 5 failed attempts for 15 minutes, 12-character password policy, forced password change on first login (`MustChangePassword`), single-use password reset tokens via `IEmailSender`, and open-redirect protection on `returnUrl`. | Learned secure session management in ASP.NET Core Identity, brute-force lockout rules, preventing user enumeration, and mitigating Open Redirect vulnerabilities. |
+| **Thur.** | Configured the zero-trust authorization pipeline in `Program.cs` with a deny-by-default `FallbackPolicy` and role policies (`Admin`, `Manager`, `Employee`, `Viewer`). Configured `SecurityStampValidatorOptions.ValidationInterval = TimeSpan.Zero` for instant session revocation upon role change or deactivation. Built Admin User Management (`UsersController.cs`) with search, filter, create, role edit, and soft deactivation (`IsActive = false`, blocking deactivation of the last active Admin). | Learned how ASP.NET Core's Security Stamp Validator revokes active sessions immediately on account deactivation and why soft deactivation is used instead of hard deletes to preserve audit history. |
+| **Fri.** | Implemented `AuditSaveChangesInterceptor` and `AuditService` to capture before/after JSON diffs (with secrets redacted) for all user and authentication events. Built the Admin Audit Log viewer (`/AuditLogs`) with filters and CSV export, integrated the Sneat Bootstrap 5 role-aware layout (`_VerticalMenu.cshtml`), and certified Phase 1 (`PHASE_1_REPORT.md`). | Mastered EF Core `SaveChangesInterceptor` to record entity mutations atomically within the same database transaction and configured security headers (HSTS, CSP, `X-Frame-Options: DENY`). |
+
+### TRAINEE'S WEEKLY REPORT — WEEK ONE (Page 6)
+During Week 1 of my attachment, I built the architectural foundation, authentication engine, role-based access control, user management, and immutable audit logging for the **Astra** portal. I configured Docker Compose with SQL Server, created the initial EF Core migration (`InitialIdentityAndAudit`), and enforced database-level audit immutability via the `TR_AuditLogs_PreventModification` SQL trigger. I implemented cookie authentication with a 12-character password policy, 5-attempt lockout protection, forced first-login password rotation, and zero-interval security stamp validation so deactivating a user or changing their role takes effect on the very next request. Finally, I delivered the Admin User Management module and the `/AuditLogs` viewer with automatic before/after JSON diff capture.
+
+* **DATE:** October 23, 2026  
+* **SIGNATURE:** *Elyamine Madila*
+
+### FOR THE USE BY THE INDUSTRIAL SUPERVISOR ONLY (Page 7)
+* **General comments on the student's progress:**  
+  *____________________*
+* **NAME OF THE SUPERVISOR:** Paul
+* **DEPARTMENT / UNIT:** Software Engineering & Project Delivery
+* **DATE:** October 23, 2026  
+* **SIGNATURE:** *____________________*
+
+---
+
+# WEEK TWO: Clients and Projects (Pages 8–10)
+
+| DAY | DESCRIPTION OF WORK DONE | NEW SKILLS LEARNT |
+|---|---|---|
+| **Mon.** | Designed and applied EF Core migration `AddClientsAndProjects` creating `clients`, `projects`, `project_clients` (many-to-many join), and `project_roles` (lookup table seeded with *Lead, Developer, Analyst, Designer, Tester, Support, Other*). Added SQL `CHECK` constraints (`PlannedEndDate >= StartDate`, `ActualEndDate >= StartDate`, `ProgressPercent BETWEEN 0 AND 100`), unique indexes, `RowVersion` concurrency tokens, and `DeleteBehavior.Restrict`. | Learned how to enforce relational integrity at the database level using SQL `CHECK` constraints, unique indexes, `DeleteBehavior.Restrict`, and SQL Server `rowversion` concurrency tokens. |
+| **Tue.** | Built the Client Management module (`ClientsController.cs`) and Admin Project Roles lookup (`ProjectRolesController.cs`). Implemented client search, active/inactive filtering, pagination, case-insensitive duplicate name protection, client detail portfolio pages, and the **Deactivate-Instead-of-Delete** policy when a client is linked to any project. | Learned how to prevent orphaned project records by automatically converting delete requests into soft deactivations (`IsActive = false`) when foreign-key associations exist. |
+| **Wed.** | Built Project Management (`ProjectsController.cs`) and `ProjectCodeGenerator` (`PRJ-YYYY-###` auto-suggested sequential codes, editable only by Admin). Implemented multi-client linking, lead eligibility checks (active Manager or Admin), project ownership rules (Managers can edit/archive only projects they lead), completion rules (setting 100% progress and requiring `ActualEndDate`), and clearing `ActualEndDate` with audit logging when reopening a Completed project. | Learned how to implement resource-based ownership rules (`LeadId == CurrentUserId`) and state-transition validations acrossViewModels, services, and database constraints. |
+| **Thur.** | Built optimistic concurrency conflict resolution (`ConcurrencyConflict.cshtml`) catching `DbUpdateConcurrencyException` and displaying a side-by-side comparison of current database values vs. submitted form values. Implemented `ProjectScopingService` for IDOR defense (returning HTTP 404 for unassigned projects to Employees and HTTP 403 for forbidden edits) and derived `IsOverdue` calculation. | Learned how EF Core `[Timestamp]` / `rowversion` prevents lost updates and why returning HTTP 404 instead of 403 for unauthorized resources prevents IDOR enumeration attacks. |
+| **Fri.** | Created the `tests/Astra.Tests` xUnit test project with 20 automated unit, authorization, IDOR, concurrency, XSS, and performance tests. Verified that querying 1,000+ seeded projects with eager loading (`.Include`) executes in under 80ms (budget < 500ms) with zero N+1 queries. Produced `PHASE_2_REPORT.md`. | Learned how to write xUnit tests for authorization matrices, optimistic concurrency collisions, HTML encoding against XSS, and 1,000+ row query performance benchmarks. |
+
+### TRAINEE'S WEEKLY REPORT — WEEK TWO (Page 10)
+During Week 2, I delivered the Clients, Projects, and Project Roles management subsystems (Phase 2 Milestone). I created the `AddClientsAndProjects` migration with SQL `CHECK` constraints, unique indexes, `DeleteBehavior.Restrict`, and `RowVersion` concurrency tokens. For Client Management, I built search, filtering, case-insensitive duplicate detection, and the deactivate-instead-of-delete safeguard for linked clients. For Project Management, I implemented `PRJ-YYYY-###` sequential code generation, lead eligibility validation, derived Overdue badges, soft archiving, URL-persisted multi-filter search, and a side-by-side optimistic concurrency conflict page (`ConcurrencyConflict.cshtml`). All 20 automated xUnit tests—including IDOR 404 verification and a <80ms performance benchmark on 1,000+ projects—passed.
+
+* **DATE:** October 30, 2026  
+* **SIGNATURE:** *Elyamine Madila*
+
+### FOR THE USE BY THE INDUSTRIAL SUPERVISOR ONLY (Page 10)
+* **General comments on the student's progress:**  
+  *____________________*
+* **NAME OF THE SUPERVISOR:** Paul
+* **DEPARTMENT / UNIT:** Software Engineering & Project Delivery
+* **DATE:** October 30, 2026  
+* **SIGNATURE:** *____________________*
+
+---
+
+# WEEK THREE: Team Assignment and Employee Profiles (Pages 11–14)
+
+| DAY | DESCRIPTION OF WORK DONE | NEW SKILLS LEARNT |
+|---|---|---|
+| **Mon.** | Modeled the `ProjectAssignment` entity (`project_assignments` table) and created EF Core migration `AddProjectAssignments`. Configured a SQL Server filtered unique index on `(ProjectId, UserId) WHERE [EndDate] IS NULL` (`IX_project_assignments_ProjectId_UserId_Active`), a `CHECK` constraint (`[EndDate] IS NULL OR [EndDate] >= [StartDate]`), a covering index on `(UserId, EndDate)`, and `DeleteBehavior.Restrict` on all foreign keys so assignments can never be hard-deleted. | Learned how SQL Server filtered unique indexes (`WHERE [EndDate] IS NULL`) enforce at most one active assignment per employee per project while allowing multiple historical closed rows when an employee is removed and later re-added. |
+| **Tue.** | Built `TeamAssignmentService` (`ITeamAssignmentService`) implementing point-in-time roster queries `GetTeamOnAsync(projectId, date)` using the rule `StartDate <= D && (EndDate == null || EndDate > D)`. Implemented batch assignment of one or more active employees with roles and start dates, soft removal (setting `EndDate` and optional `RemovalReason` with audit logging), and role-on-project updates. | Learned temporal database query design for point-in-time roster reconstruction and how to test boundary dates (start day, end day, and same-day start and end). |
+| **Wed.** | Implemented project lead team synchronization and governance rules: automatically adding the Project Lead to the team with the `Lead` role upon project creation; logging lead changes (`LeadChanged`) with an explicit option (`KeepPreviousLeadOnTeam`) to retain or close the previous lead's membership; blocking removal of the current Project Lead from the team until a new lead is chosen; and blocking assignments to Completed, Cancelled, or Archived projects (unless overridden by an Admin with a documented reason). | Learned how to enforce cross-entity domain invariants between Project leadership and Team Assignments and how to implement auditable administrative overrides. |
+| **Thur.** | Activated the "Team Staffing" tab on `Views/Projects/Details.cshtml` with the current team table, a toggle to view past members (`ShowPastMembers`), a point-in-time date selector ("Roster on Date"), a multi-employee assignment modal, and a removal confirmation modal. Built `EmployeesController` and `Views/Employees/` (`Index.cshtml` and `Details.cshtml`) for the Staff Directory and Employee Profiles (displaying current projects, past projects, inactive status badges, and an Open Tasks empty state). | Learned how to build multi-row dynamic assignment forms in Razor/Bootstrap 5 and enforce strict IDOR scoping (`CanUserViewEmployeeProfile`) so Employees can view only their own profile (returning HTTP 404 for others). |
+| **Fri.** | Updated `UsersController.ToggleStatus` to block deactivating a user who leads active projects or holds active team assignments, displaying a clear list of projects that must be resolved first. Expanded `DbInitializer.cs` with current and historical team assignments and a deactivated employee with preserved history. Added comprehensive Week 3 xUnit tests (`TeamAssignmentAndProfileTests.cs`) covering point-in-time boundaries, duplicate rejection, soft removal/re-addition, IDOR rules, and deactivation blockers, and generated `PHASE_3_REPORT.md`. | Learned how to implement pre-deactivation dependency checks across modules and verify via automated tests that no hard-delete paths exist for historical assignment records. |
+
+### TRAINEE'S WEEKLY REPORT — WEEK THREE (Page 13–14)
+During Week 3, I implemented the Team Assignment and Employee Profiles module (Phase 3 Milestone). On the database layer, I created the `project_assignments` table with a filtered unique index (`WHERE [EndDate] IS NULL`) and a date `CHECK` constraint (`EndDate >= StartDate`), ensuring no employee can hold two active assignments on the same project while preserving historical memberships forever when an employee is removed and later re-added. I built `TeamAssignmentService` to support assigning one or more active employees at once, soft-removing members with an effective end date and audit entry, synchronizing the Project Lead as a team member with the `Lead` role, blocking removal of the current lead, and executing point-in-time roster queries (`GetTeamOnAsync`). On the UI, I activated the Project "Team Staffing" tab, built the Staff Directory and Employee Profile views (`/Employees`) with strict IDOR protection (Employees see only their own profile and assigned projects, receiving 404 for others), updated user deactivation to block deactivating users with active assignments or led projects, and verified all requirements with automated xUnit tests.
+
+* **DATE:** November 6, 2026  
+* **SIGNATURE:** *Elyamine Madila*
+
+### FOR THE USE BY THE INDUSTRIAL SUPERVISOR ONLY (Page 14)
+* **General comments on the student's progress:**  
+  *____________________*
+* **NAME OF THE SUPERVISOR:** Paul
+* **DEPARTMENT / UNIT:** Software Engineering & Project Delivery
+* **DATE:** November 6, 2026  
+* **SIGNATURE:** *____________________*

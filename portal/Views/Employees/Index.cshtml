@@ -1,0 +1,298 @@
+@model AspnetCoreMvcFull.ViewModels.Employees.EmployeeListViewModel
+@{
+  ViewData["Title"] = Model.IsEmployeeScoped ? "My Employee Profile Directory" : "Staff Directory & Project Allocation";
+}
+
+<div class="row">
+  <!-- Header -->
+  <div class="col-12 mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h4 class="fw-bold mb-1">
+          <i class="bx bx-user-pin text-primary me-1"></i>
+          @(Model.IsEmployeeScoped ? "My Staff Profile" : "Staff Directory & Project Allocation")
+        </h4>
+        <p class="text-muted mb-0 small">
+          @(Model.IsEmployeeScoped
+            ? "View your personal employee profile, active project assignments, and historical project timeline."
+            : "Search and filter corporate staff across departments, inspect active project allocations, and review historical assignments.")
+        </p>
+      </div>
+      @if (User.IsInRole("Admin"))
+      {
+        <div>
+          <a asp-controller="Users" asp-action="Create" class="btn btn-primary">
+            <i class="bx bx-user-plus me-1"></i> Provision New User
+          </a>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Search & Filter Bar -->
+  @if (!Model.IsEmployeeScoped)
+  {
+    <div class="col-12 mb-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <form asp-action="Index" method="get" class="row g-3 align-items-end">
+            <!-- Search -->
+            <div class="col-lg-3 col-md-6 col-12">
+              <label class="form-label small fw-semibold">Search Staff</label>
+              <div class="input-group input-group-merge">
+                <span class="input-group-text"><i class="bx bx-search"></i></span>
+                <input type="text" name="search" value="@Model.Search" class="form-control"
+                       placeholder="Name, email, department..." />
+              </div>
+            </div>
+
+            <!-- Department Filter -->
+            <div class="col-lg-3 col-md-6 col-12">
+              <label class="form-label small fw-semibold">Department</label>
+              <select name="department" class="form-select">
+                <option value="">All Departments</option>
+                @foreach (var dept in Model.DepartmentOptions)
+                {
+                  <option value="@dept.Value" selected="@(Model.Department == dept.Value)">@dept.Text</option>
+                }
+              </select>
+            </div>
+
+            <!-- Role Filter -->
+            <div class="col-lg-2 col-md-4 col-6">
+              <label class="form-label small fw-semibold">System Role</label>
+              <select name="roleFilter" class="form-select">
+                <option value="">All Roles</option>
+                @foreach (var r in Model.RoleOptions)
+                {
+                  <option value="@r" selected="@(Model.RoleFilter == r)">@r</option>
+                }
+              </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="col-lg-2 col-md-4 col-6">
+              <label class="form-label small fw-semibold">Account Status</label>
+              <select name="statusFilter" class="form-select">
+                <option value="active" selected="@(Model.StatusFilter == "active")">Active Only</option>
+                <option value="inactive" selected="@(Model.StatusFilter == "inactive")">Deactivated Only</option>
+                <option value="all" selected="@(Model.StatusFilter == "all")">All Accounts</option>
+              </select>
+            </div>
+
+            <!-- Sort & Submit -->
+            <div class="col-lg-2 col-md-4 col-12 d-flex gap-2">
+              <input type="hidden" name="sortBy" value="@Model.SortBy" />
+              <input type="hidden" name="sortOrder" value="@Model.SortOrder" />
+              <button type="submit" class="btn btn-primary flex-grow-1">
+                <i class="bx bx-filter-alt me-1"></i> Filter
+              </button>
+              <a asp-action="Index" class="btn btn-outline-secondary" title="Reset Filters">
+                <i class="bx bx-refresh"></i>
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Employee Directory Table -->
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+        <div>
+          <h6 class="mb-0 fw-bold">Staff Roster</h6>
+          <small class="text-muted">Showing @Model.Employees.Count of @Model.TotalItems staff member(s)</small>
+        </div>
+        @if (!Model.IsEmployeeScoped)
+        {
+          <div class="d-flex align-items-center gap-2 small">
+            <span class="text-muted">Sort by:</span>
+            <a asp-action="Index"
+               asp-route-search="@Model.Search"
+               asp-route-department="@Model.Department"
+               asp-route-statusFilter="@Model.StatusFilter"
+               asp-route-roleFilter="@Model.RoleFilter"
+               asp-route-sortBy="name"
+               asp-route-sortOrder="@(Model.SortBy == "name" && Model.SortOrder == "asc" ? "desc" : "asc")"
+               class="btn btn-xs @(Model.SortBy == "name" ? "btn-primary" : "btn-outline-secondary")">
+              Name
+            </a>
+            <a asp-action="Index"
+               asp-route-search="@Model.Search"
+               asp-route-department="@Model.Department"
+               asp-route-statusFilter="@Model.StatusFilter"
+               asp-route-roleFilter="@Model.RoleFilter"
+               asp-route-sortBy="department"
+               asp-route-sortOrder="@(Model.SortBy == "department" && Model.SortOrder == "asc" ? "desc" : "asc")"
+               class="btn btn-xs @(Model.SortBy == "department" ? "btn-primary" : "btn-outline-secondary")">
+              Department
+            </a>
+            <a asp-action="Index"
+               asp-route-search="@Model.Search"
+               asp-route-department="@Model.Department"
+               asp-route-statusFilter="@Model.StatusFilter"
+               asp-route-roleFilter="@Model.RoleFilter"
+               asp-route-sortBy="projects"
+               asp-route-sortOrder="@(Model.SortBy == "projects" && Model.SortOrder == "desc" ? "asc" : "desc")"
+               class="btn btn-xs @(Model.SortBy == "projects" ? "btn-primary" : "btn-outline-secondary")">
+              Active Projects
+            </a>
+          </div>
+        }
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive text-nowrap">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>System Role</th>
+                <th>Status</th>
+                <th>Current Projects</th>
+                <th>Past Projects</th>
+                <th class="text-end">Profile</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (Model.Employees.Count == 0)
+              {
+                <tr>
+                  <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bx bx-user-x fs-1 d-block mb-2 text-secondary"></i>
+                    <span class="fw-semibold d-block">No matching employees found.</span>
+                    <small>Try adjusting your search or filter criteria.</small>
+                  </td>
+                </tr>
+              }
+              else
+              {
+                @foreach (var emp in Model.Employees)
+                {
+                  <tr>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <div class="avatar avatar-sm me-3">
+                          <span class="avatar-initial rounded-circle @(emp.IsActive ? "bg-label-primary" : "bg-label-secondary") fw-bold">
+                            @(emp.Name.Length > 0 ? emp.Name[0].ToString().ToUpper() : "E")
+                          </span>
+                        </div>
+                        <div>
+                          <a asp-action="Details" asp-route-id="@emp.Id" class="fw-semibold text-body d-block">
+                            @emp.Name
+                          </a>
+                          <small class="text-muted">@emp.Email</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>@emp.Department</td>
+                    <td>
+                      @switch (emp.SystemRole)
+                      {
+                        case "Admin":
+                          <span class="badge bg-label-danger">Admin</span>
+                          break;
+                        case "Manager":
+                          <span class="badge bg-label-primary">Manager</span>
+                          break;
+                        case "Viewer":
+                          <span class="badge bg-label-info">Viewer</span>
+                          break;
+                        default:
+                          <span class="badge bg-label-secondary">Employee</span>
+                          break;
+                      }
+                    </td>
+                    <td>
+                      @if (emp.IsActive)
+                      {
+                        <span class="badge bg-label-success">Active</span>
+                      }
+                      else
+                      {
+                        <span class="badge bg-label-secondary">Inactive</span>
+                      }
+                    </td>
+                    <td>
+                      @if (emp.ActiveProjectsCount == 0)
+                      {
+                        <span class="text-muted small">Unallocated (0)</span>
+                      }
+                      else
+                      {
+                        <span class="badge bg-primary me-1">@emp.ActiveProjectsCount</span>
+                        <span class="small font-monospace text-secondary">
+                          @string.Join(", ", emp.CurrentProjectCodes.Take(3))@(emp.CurrentProjectCodes.Count > 3 ? "..." : "")
+                        </span>
+                      }
+                    </td>
+                    <td>
+                      <span class="badge bg-label-secondary">@emp.PastProjectsCount Historical</span>
+                    </td>
+                    <td class="text-end">
+                      <a asp-action="Details" asp-route-id="@emp.Id" class="btn btn-sm btn-outline-primary">
+                        <i class="bx bx-id-card me-1"></i> View Profile
+                      </a>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      @if (Model.TotalPages > 1)
+      {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <small class="text-muted">Page @Model.Page of @Model.TotalPages (@Model.TotalItems total)</small>
+          <nav aria-label="Employee pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                <a class="page-link"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-department="@Model.Department"
+                   asp-route-statusFilter="@Model.StatusFilter"
+                   asp-route-roleFilter="@Model.RoleFilter"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-sortOrder="@Model.SortOrder"
+                   asp-route-page="@(Model.Page - 1)">Previous</a>
+              </li>
+              @for (var p = 1; p <= Model.TotalPages; p++)
+              {
+                <li class="page-item @(p == Model.Page ? "active" : "")">
+                  <a class="page-link"
+                     asp-action="Index"
+                     asp-route-search="@Model.Search"
+                     asp-route-department="@Model.Department"
+                     asp-route-statusFilter="@Model.StatusFilter"
+                     asp-route-roleFilter="@Model.RoleFilter"
+                     asp-route-sortBy="@Model.SortBy"
+                     asp-route-sortOrder="@Model.SortOrder"
+                     asp-route-page="@p">@p</a>
+                </li>
+              }
+              <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                <a class="page-link"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-department="@Model.Department"
+                   asp-route-statusFilter="@Model.StatusFilter"
+                   asp-route-roleFilter="@Model.RoleFilter"
+                   asp-route-sortBy="@Model.SortBy"
+                   asp-route-sortOrder="@Model.SortOrder"
+                   asp-route-page="@(Model.Page + 1)">Next</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+

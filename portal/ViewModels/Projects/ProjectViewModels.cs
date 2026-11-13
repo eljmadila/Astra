@@ -77,6 +77,9 @@ public class ProjectFormViewModel : IValidatableObject
     [Display(Name = "Project Lead")]
     public int LeadId { get; set; }
 
+    [Display(Name = "Keep previous lead on project team as a member")]
+    public bool KeepPreviousLeadOnTeam { get; set; } = false;
+
     [Display(Name = "Associated Clients")]
     public List<int> SelectedClientIds { get; set; } = [];
 
@@ -138,7 +141,70 @@ public class ProjectDetailsViewModel
     public Project Project { get; set; } = null!;
     public bool CanEdit { get; set; }
     public bool CanArchive { get; set; }
+    public bool CanManageTeam { get; set; }
+    public bool IsAdmin { get; set; }
+    public bool CanViewEmployeeProfiles { get; set; }
+    public int? CurrentUserId { get; set; }
+    public string ActiveTab { get; set; } = "overview";
+    public bool ShowPastMembers { get; set; } = false;
+    public DateOnly? PointInTimeDate { get; set; }
+
+    public List<ProjectAssignment> CurrentTeam { get; set; } = [];
+    public List<ProjectAssignment> PastMembers { get; set; } = [];
+    public List<ProjectAssignment>? PointInTimeTeam { get; set; }
+
+    public List<SelectListItem> AvailableEmployees { get; set; } = [];
+    public List<SelectListItem> ActiveProjectRoles { get; set; } = [];
+    public bool RequiresAdminOverrideForAssign { get; set; }
+
     public List<AuditLog> RecentAuditLogs { get; set; } = [];
+}
+
+public class AssignTeamMemberRowInputModel
+{
+    public int UserId { get; set; }
+    public int RoleOnProjectId { get; set; }
+    public DateOnly StartDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+}
+
+public class AssignTeamMembersInputModel
+{
+    [Required]
+    public int ProjectId { get; set; }
+
+    public List<int> UserIds { get; set; } = [];
+    public List<int> RoleOnProjectIds { get; set; } = [];
+    public List<DateOnly> StartDates { get; set; } = [];
+
+    [StringLength(500)]
+    public string? AdminOverrideReason { get; set; }
+}
+
+public class RemoveTeamMemberInputModel
+{
+    [Required]
+    public int ProjectId { get; set; }
+
+    [Required]
+    public int AssignmentId { get; set; }
+
+    [Required(ErrorMessage = "Effective removal date is required.")]
+    public DateOnly EffectiveEndDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    [StringLength(500, ErrorMessage = "Reason cannot exceed 500 characters.")]
+    public string? Reason { get; set; }
+}
+
+public class ChangeTeamMemberRoleInputModel
+{
+    [Required]
+    public int ProjectId { get; set; }
+
+    [Required]
+    public int AssignmentId { get; set; }
+
+    [Required]
+    public int NewRoleOnProjectId { get; set; }
 }
 
 public class ProjectConflictViewModel

@@ -122,3 +122,39 @@
 - [x] Performance validation proving list queries across 1,000+ seeded projects execute well under the 500ms budget.
 - [x] Phase 2 certification report generated.
 
+---
+
+## 4. Week 3 Detailed Task Breakdown (Team Assignment and Employee Profiles)
+
+### Sub-Phase 3.1: Database & Assignment Entity
+- [x] EF Core migration `AddProjectAssignments` creating `project_assignments` (`Id`, `ProjectId`, `UserId`, `ProjectRoleId`, `StartDate`, `EndDate`, `RemovalReason`, `CreatedByUserId`, `CreatedAt`).
+- [x] Filtered unique index `IX_project_assignments_ProjectId_UserId_Active` on `(ProjectId, UserId) WHERE [EndDate] IS NULL` preventing duplicate active assignments on a single project.
+- [x] SQL CHECK constraint `CK_project_assignments_dates` enforcing `[EndDate] IS NULL OR [EndDate] >= [StartDate]`.
+- [x] Composite index `IX_project_assignments_UserId_EndDate` on `(UserId, EndDate)` for employee roster lookups.
+- [x] Foreign keys configured with `DeleteBehavior.Restrict`; no hard-delete paths exist anywhere in the codebase.
+
+### Sub-Phase 3.2: Team Assignment Service & Point-in-Time Roster
+- [x] Implemented `ITeamAssignmentService` and `TeamAssignmentService`.
+- [x] Universal point-in-time roster evaluation (`GetTeamOnAsync` / `IsActiveOnDate`): `StartDate <= D && (EndDate == null || EndDate > D)`.
+- [x] Batch employee assignment (`AssignMembersAsync`) validating active user status, active role status, duplicate active membership prevention, and Closed/Archived project override rules (Admin-only with reason).
+- [x] Soft removal (`RemoveMemberAsync`) setting `EndDate` and optional `RemovalReason` while blocking removal of the current Project Lead.
+- [x] Re-adding a previously removed team member inserts a fresh `ProjectAssignment` row, preserving past intervals intact.
+- [x] Role-on-project change (`ChangeRoleOnProjectAsync`) with before/after audit logging while protecting the Project Lead's `Lead` role.
+
+### Sub-Phase 3.3: Project Lead Synchronization & Lifecycle
+- [x] Project creation automatically adds the Project Lead to `project_assignments` in the `Lead` role (`EnsureLeadOnTeamAsync`).
+- [x] Project Lead change (`HandleLeadChangeAsync`) assigns the new Lead to the `Lead` role and either ends the previous Lead's assignment or transitions them to a standard role if `KeepPreviousLeadOnTeam` is checked.
+- [x] Updated `UsersController.ToggleStatus` to call `GetDeactivationBlockersAsync`, blocking user deactivation when a user leads active projects or holds active team assignments and displaying a clear resolution list.
+
+### Sub-Phase 3.4: Employee Directory & Profiles
+- [x] Implemented `EmployeesController` (`Index` and `Details`) and responsive Razor views.
+- [x] Staff Directory (`/Employees`) with search (name, email, department), department/role/status filters, sorting, and server-side pagination.
+- [x] Employee Profile (`/Employees/Details/{id}`) displaying identity metadata, active/inactive badge, Current Projects table, Past Projects history table, and Open Tasks empty state placeholder.
+- [x] Strict IDOR protection (`CanUserViewEmployeeProfile`): Employees can view only their own profile and receive HTTP 404 when requesting another employee's profile.
+
+### Sub-Phase 3.5: Testing & Quality Exit Gate
+- [x] Comprehensive unit and integration tests in `TeamAssignmentAndProfileTests.cs` and `ProjectScopingAndAuthorizationTests.cs` covering point-in-time boundary rules, multi-member assignment, removal, re-addition history preservation, Lead protection, closed-project overrides, deactivation blockers, schema verification, and Employee IDOR 404 boundaries.
+- [x] Seeded active and historical project assignments plus an inactive historical employee in `DbInitializer.cs`.
+- [x] Phase 3 certification report generated (`docs/PHASE_REPORTS/PHASE_3_REPORT.md`).
+
+

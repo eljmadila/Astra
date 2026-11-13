@@ -234,70 +234,70 @@ It is always clear who is on which project, in what role, and since when, with p
 ## Tasks
 
 ### 1. Database
-- [ ] Migration for `project_assignments`: project, user, role on project, start date, end date (null while active), created by, created at
-- [ ] Filtered unique index on (`project_id`, `user_id`) WHERE `end_date IS NULL` so nobody holds two active assignments on one project
-- [ ] CHECK: `end_date IS NULL OR end_date >= start_date`
-- [ ] Indexes: `project_assignments(user_id, end_date)`
-- [ ] Restrict deletes; the code must never hard-delete an assignment
+- [x] Migration for `project_assignments`: project, user, role on project, start date, end date (null while active), created by, created at
+- [x] Filtered unique index on (`project_id`, `user_id`) WHERE `end_date IS NULL` so nobody holds two active assignments on one project
+- [x] CHECK: `end_date IS NULL OR end_date >= start_date`
+- [x] Indexes: `project_assignments(user_id, end_date)`
+- [x] Restrict deletes; the code must never hard-delete an assignment
 
 ### 2. Team assignment on a project
-- [ ] "Team" tab on the project page: current team table with name, role, start date
-- [ ] Toggle to show past members with their start and end dates
-- [ ] Assign one or more employees at once, each with a role (from the lookup) and a start date
-- [ ] Only active users can be assigned; deactivated users are hidden from pickers by default
-- [ ] An employee can be on several projects at the same time
-- [ ] Removing a member sets an end date (effective date required, optional reason) and writes an audit entry
-- [ ] Re-adding someone who was removed creates a new assignment row, leaving history intact
-- [ ] Block assigning to Completed, Cancelled or archived projects (Admin override with a reason)
-- [ ] Permissions: Admin on all projects; Manager on projects they lead; Employee and Viewer read-only
-- [ ] Note: moving someone between projects is Week 4's reassignment workflow. This week handles add and remove on a single project only, and must not offer a "move" shortcut.
+- [x] "Team" tab on the project page: current team table with name, role, start date
+- [x] Toggle to show past members with their start and end dates
+- [x] Assign one or more employees at once, each with a role (from the lookup) and a start date
+- [x] Only active users can be assigned; deactivated users are hidden from pickers by default
+- [x] An employee can be on several projects at the same time
+- [x] Removing a member sets an end date (effective date required, optional reason) and writes an audit entry
+- [x] Re-adding someone who was removed creates a new assignment row, leaving history intact
+- [x] Block assigning to Completed, Cancelled or archived projects (Admin override with a reason)
+- [x] Permissions: Admin on all projects; Manager on projects they lead; Employee and Viewer read-only
+- [x] Note: moving someone between projects is Week 4's reassignment workflow. This week handles add and remove on a single project only, and must not offer a "move" shortcut.
 
 ### 3. Project lead handling
-- [ ] The project lead appears on the team as a member with the Lead role
-- [ ] Changing the project lead is logged; the old lead stays on the team only if explicitly kept
-- [ ] Block removing the current lead from the team until a new lead is chosen
+- [x] The project lead appears on the team as a member with the Lead role
+- [x] Changing the project lead is logged; the old lead stays on the team only if explicitly kept
+- [x] Block removing the current lead from the team until a new lead is chosen
 
 ### 4. Employee list and profiles
-- [ ] Employee list with search, filter by department and active status, sort, pagination
-- [ ] Profile page: name, email, department, role, active state
-- [ ] Current projects (project, role on project, since) and past projects (role, date range)
-- [ ] Open tasks section (empty until Week 5; render an empty state)
-- [ ] Permissions: Admin and Manager see any profile; Viewer read-only; Employee sees their own profile only; return 404 for others
-- [ ] A deactivated user remains visible in history and profiles, marked as inactive
+- [x] Employee list with search, filter by department and active status, sort, pagination
+- [x] Profile page: name, email, department, role, active state
+- [x] Current projects (project, role on project, since) and past projects (role, date range)
+- [x] Open tasks section (empty until Week 5; render an empty state)
+- [x] Permissions: Admin and Manager see any profile; Viewer read-only; Employee sees their own profile only; return 404 for others
+- [x] A deactivated user remains visible in history and profiles, marked as inactive
 
 ### 5. Point-in-time query
-- [ ] Application service `GetTeamOn(projectId, date)` returning who was on the team on any date
-- [ ] Use the same rule everywhere: active on date D means `start_date <= D AND (end_date IS NULL OR end_date > D)`
-- [ ] Unit tests cover boundary dates (start day, end day, same-day start and end)
+- [x] Application service `GetTeamOn(projectId, date)` returning who was on the team on any date
+- [x] Use the same rule everywhere: active on date D means `start_date <= D AND (end_date IS NULL OR end_date > D)`
+- [x] Unit tests cover boundary dates (start day, end day, same-day start and end)
 
 ### 6. Deactivation rule update
-- [ ] Block deactivating a user who has active assignments or leads projects; show a clear list of what must be resolved first (the full unassign flow lands in Week 4)
+- [x] Block deactivating a user who has active assignments or leads projects; show a clear list of what must be resolved first (the full unassign flow lands in Week 4)
 
 ### 7. Audit and UI
-- [ ] Audit: assign, remove, role-on-project change, lead change
-- [ ] Forms with inline validation, confirmations for removal, success toasts
-- [ ] Mobile-friendly team tables
+- [x] Audit: assign, remove, role-on-project change, lead change
+- [x] Forms with inline validation, confirmations for removal, success toasts
+- [x] Mobile-friendly team tables
 
 ## Tests required
-- [ ] Unit tests: point-in-time logic, overlap and duplicate rules, boundary dates
-- [ ] Integration tests: assign, remove, re-add, toggle past members; filtered unique index rejects a duplicate active assignment even under concurrent requests
-- [ ] A code or schema test proving no hard-delete path exists for assignments
-- [ ] Authorization matrix for every new route; Employee cannot open another employee's profile
-- [ ] IDOR tests on profile and team endpoints
-- [ ] Audit entry exists for every assign and remove
+- [x] Unit tests: point-in-time logic, overlap and duplicate rules, boundary dates
+- [x] Integration tests: assign, remove, re-add, toggle past members; filtered unique index rejects a duplicate active assignment even under concurrent requests
+- [x] A code or schema test proving no hard-delete path exists for assignments
+- [x] Authorization matrix for every new route; Employee cannot open another employee's profile
+- [x] IDOR tests on profile and team endpoints
+- [x] Audit entry exists for every assign and remove
 
 ## Deliverables
-- Team management and employee profiles
-- Seed data with current and historical assignments
-- Updated docs
-- Phase 3 report
+- [x] Team management and employee profiles
+- [x] Seed data with current and historical assignments
+- [x] Updated docs
+- [x] Phase 3 report ([`docs/PHASE_REPORTS/PHASE_3_REPORT.md`](PHASE_REPORTS/PHASE_3_REPORT.md))
 
 ## Exit gate (all must be true)
-- [ ] All spec 4.3 acceptance criteria pass
-- [ ] `GetTeamOn(project, date)` returns correct results, including boundaries
-- [ ] No duplicate active assignment is possible, verified at the database level
-- [ ] No hard deletes of assignments anywhere in the code
-- [ ] Permission tests pass; CI is green
+- [x] All spec 4.3 acceptance criteria pass
+- [x] `GetTeamOn(project, date)` returns correct results, including boundaries
+- [x] No duplicate active assignment is possible, verified at the database level
+- [x] No hard deletes of assignments anywhere in the code
+- [x] Permission tests pass; CI is green
 
 ## Demo script for the stakeholder
 1. As a Manager, add three people to a project with different roles and start dates.

@@ -19,6 +19,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<ProjectClient> ProjectClients => Set<ProjectClient>();
     public DbSet<ProjectRole> ProjectRoles => Set<ProjectRole>();
+    public DbSet<ProjectAssignment> ProjectAssignments => Set<ProjectAssignment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -171,6 +172,49 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
             entity.HasOne(pc => pc.Client)
                   .WithMany(c => c.ProjectClients)
                   .HasForeignKey(pc => pc.ClientId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Project Assignments (Week 3)
+        builder.Entity<ProjectAssignment>(entity =>
+        {
+            entity.ToTable("project_assignments", t =>
+            {
+                t.HasCheckConstraint("CK_project_assignments_dates", "[EndDate] IS NULL OR [EndDate] >= [StartDate]");
+            });
+
+            entity.HasKey(pa => pa.Id);
+            entity.Property(pa => pa.RemovalReason).HasMaxLength(500);
+            entity.Property(pa => pa.CreatedAt).IsRequired();
+
+            // Filtered unique index: nobody holds two active assignments on one project
+            entity.HasIndex(pa => new { pa.ProjectId, pa.UserId })
+                  .HasDatabaseName("IX_project_assignments_ProjectId_UserId_Active")
+                  .HasFilter("[EndDate] IS NULL")
+                  .IsUnique();
+
+            // Performance index for employee profile and point-in-time queries
+            entity.HasIndex(pa => new { pa.UserId, pa.EndDate })
+                  .HasDatabaseName("IX_project_assignments_UserId_EndDate");
+
+            entity.HasOne(pa => pa.Project)
+                  .WithMany(p => p.ProjectAssignments)
+                  .HasForeignKey(pa => pa.ProjectId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(pa => pa.User)
+                  .WithMany()
+                  .HasForeignKey(pa => pa.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(pa => pa.RoleOnProject)
+                  .WithMany()
+                  .HasForeignKey(pa => pa.RoleOnProjectId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(pa => pa.CreatedBy)
+                  .WithMany()
+                  .HasForeignKey(pa => pa.CreatedById)
                   .OnDelete(DeleteBehavior.Restrict);
         });
     }

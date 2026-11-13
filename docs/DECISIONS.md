@@ -126,3 +126,30 @@ This document records all architectural, architectural-compromise, and requireme
 * **Context:** Securing project portfolio data from unauthorized access or IDOR enumeration.
 * **Decision:** Implemented `IProjectScopingService` to scope queries before execution. Administrators, Viewers, and Managers have portfolio visibility; Employees only view projects they lead or are assigned to. If a user attempts to access an unauthorized project by ID, the application returns HTTP 404 (Not Found) rather than 403 to avoid confirming the resource's existence. Actions on visible but forbidden resources (e.g. non-lead Manager attempting to edit another's project) return HTTP 403 (Forbidden).
 * **Rationale:** Zero-trust architecture strictly preventing information disclosure and privilege escalation.
+
+---
+
+### DECISION-014: Filtered Unique Index on Active Project Assignments and Zero Hard Deletes
+* **Date:** 2026-11-08
+* **Status:** Accepted
+* **Context:** An employee may be removed from a project and re-added at a later date, requiring multiple historical rows for the same `(ProjectId, UserId)` pair while strictly prohibiting simultaneous duplicate active memberships on the same project.
+* **Decision:** Created a filtered unique index `IX_project_assignments_ProjectId_UserId_Active` on `(ProjectId, UserId) WHERE [EndDate] IS NULL` alongside a SQL CHECK constraint `CK_project_assignments_dates` (`[EndDate] IS NULL OR [EndDate] >= [StartDate]`). All foreign keys use `DeleteBehavior.Restrict`, and no code path calls `Remove` or `RemoveRange` on `ProjectAssignments`. Removing a member sets `EndDate` and records an audit entry; re-adding inserts a new `ProjectAssignment` row.
+* **Rationale:** Enforces single active membership at the database engine level (even under concurrent requests) while preserving a complete, immutable timeline of past project memberships.
+
+---
+
+### DECISION-015: Half-Open Interval Rule for Point-in-Time Team Rosters
+* **Date:** 2026-11-08
+* **Status:** Accepted
+* **Context:** Stakeholder reporting and historical roster inspection ("Who was on this project on date D?") require deterministic boundary semantics when a member joins or leaves on date `D`, or starts and ends on the same day.
+* **Decision:** Standardized `GetTeamOnAsync(projectId, date)` and `ProjectAssignment.IsActiveOn(date)` across the application using the half-open interval rule: `StartDate <= D && (EndDate == null || EndDate > D)`.
+* **Rationale:** Matches Section 5 of the specification (`start_date <= D AND (end_date IS NULL OR end_date > D)`), ensuring that on the effective removal date `D`, the member is already considered off the active roster, and same-day start/end corrections (`StartDate == D && EndDate == D`) do not count as active on `D`.
+
+---
+
+### DECISION-016: Pre-Deactivation Dependency Gate for Active Leads and Team Members
+* **Date:** 2026-11-08
+* **Status:** Accepted
+* **Context:** Deactivating a user who actively leads non-completed projects or holds active `ProjectAssignment` rows would leave projects leaderless or staffed by inactive personnel.
+* **Decision:** Updated `UsersController.ToggleStatus` to query `ITeamAssignmentService.GetDeactivationBlockersAsync(userId)` before deactivating any account. If the user leads active projects or holds active assignments (`EndDate == null`), deactivation is blocked and the administrator receives an explicit list of projects and assignments that must be reassigned or ended first.
+* **Rationale:** Prevents orphaned project leadership and ghost staffing prior to Week 4's automated unassign/reassignment wizard.

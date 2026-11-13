@@ -1,8 +1,8 @@
 @{
-  var successMessage = TempData["SuccessMessage"] as string;
-  var errorMessage = TempData["ErrorMessage"] as string;
-  var infoMessage = TempData["InfoMessage"] as string;
-  var warningMessage = TempData["WarningMessage"] as string;
+  var successMessage = (TempData["SuccessMessage"] ?? TempData["Success"]) as string;
+  var errorMessage = (TempData["ErrorMessage"] ?? TempData["Error"]) as string;
+  var infoMessage = (TempData["InfoMessage"] ?? TempData["Info"]) as string;
+  var warningMessage = (TempData["WarningMessage"] ?? TempData["Warning"]) as string;
 }
 
 <div aria-live="polite" aria-atomic="true" class="position-relative">

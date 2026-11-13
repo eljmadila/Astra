@@ -6,6 +6,8 @@
                   Model.Project.Status != AspnetCoreMvcFull.Entities.ProjectStatus.Cancelled &&
                   Model.Project.PlannedEndDate < today;
   var daysOverdue = isOverdue ? (today.DayNumber - Model.Project.PlannedEndDate.DayNumber) : 0;
+  var isOverviewActive = Model.ActiveTab != "team";
+  var isTeamActive = Model.ActiveTab == "team";
 }
 
 <div class="row">
@@ -66,14 +68,14 @@
     <div class="nav-align-top mb-4">
       <ul class="nav nav-tabs nav-fill" role="tablist">
         <li class="nav-item">
-          <button type="button" class="nav-link active fw-semibold" role="tab" data-bs-toggle="tab" data-bs-target="#navs-overview">
+          <button type="button" class="nav-link @(isOverviewActive ? "active" : "") fw-semibold" role="tab" data-bs-toggle="tab" data-bs-target="#navs-overview">
             <i class="bx bx-detail me-1"></i> Overview & Governance
           </button>
         </li>
         <li class="nav-item">
-          <button type="button" class="nav-link disabled" role="tab" tabindex="-1">
+          <button type="button" class="nav-link @(isTeamActive ? "active" : "") fw-semibold" role="tab" data-bs-toggle="tab" data-bs-target="#navs-team">
             <i class="bx bx-group me-1"></i> Team Staffing
-            <span class="badge bg-label-secondary font-size-xs ms-1">Week 3</span>
+            <span class="badge bg-label-primary font-size-xs ms-1">@Model.CurrentTeam.Count</span>
           </button>
         </li>
         <li class="nav-item">
@@ -98,7 +100,7 @@
 
       <div class="tab-content bg-transparent p-0 pt-3">
         <!-- Overview Tab -->
-        <div class="tab-pane fade show active" id="navs-overview" role="tabpanel">
+        <div class="tab-pane fade @(isOverviewActive ? "show active" : "")" id="navs-overview" role="tabpanel">
           <div class="row">
             <!-- Left Column: Metrics & Scope -->
             <div class="col-lg-8 col-12">
@@ -248,7 +250,16 @@
                       </span>
                     </div>
                     <div>
-                      <h6 class="mb-0 fw-bold">@(Model.Project.Lead?.Name ?? "Unassigned")</h6>
+                      @if (Model.Project.Lead != null && (Model.CanViewEmployeeProfiles || Model.CurrentUserId == Model.Project.LeadId))
+                      {
+                        <a asp-controller="Employees" asp-action="Details" asp-route-id="@Model.Project.LeadId" class="h6 mb-0 fw-bold text-body d-block">
+                          @Model.Project.Lead.Name
+                        </a>
+                      }
+                      else
+                      {
+                        <h6 class="mb-0 fw-bold">@(Model.Project.Lead?.Name ?? "Unassigned")</h6>
+                      }
                       <small class="text-muted d-block">@(Model.Project.Lead?.Email ?? "")</small>
                       <span class="badge bg-label-info font-size-xs mt-1">@(Model.Project.Lead?.Department ?? "Executive")</span>
                     </div>
@@ -325,10 +336,562 @@
             </div>
           </div>
         </div>
+
+        <!-- Team Staffing Tab (Week 3) -->
+        <div class="tab-pane fade @(isTeamActive ? "show active" : "")" id="navs-team" role="tabpanel">
+          <!-- Controls & Point-in-Time Query Bar -->
+          <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body py-3">
+              <div class="row g-3 align-items-center justify-content-between">
+                <!-- Point-in-time query form -->
+                <div class="col-lg-6 col-12">
+                  <form asp-action="Details" asp-route-id="@Model.Project.Id" method="get" class="d-flex flex-wrap align-items-center gap-2">
+                    <input type="hidden" name="tab" value="team" />
+                    <input type="hidden" name="showPast" value="@Model.ShowPastMembers.ToString().ToLower()" />
+                    <label for="asOfDateInput" class="form-label mb-0 fw-semibold small text-secondary">
+                      <i class="bx bx-calendar-event me-1 text-primary"></i> Roster on Date:
+                    </label>
+                    <input type="date" id="asOfDateInput" name="asOfDate"
+                           value="@(Model.PointInTimeDate?.ToString("yyyy-MM-dd") ?? "")"
+                           class="form-control form-control-sm" style="width: auto;" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                      <i class="bx bx-search-alt me-1"></i> View Roster
+                    </button>
+                    @if (Model.PointInTimeDate.HasValue)
+                    {
+                      <a asp-action="Details" asp-route-id="@Model.Project.Id" asp-route-tab="team" asp-route-showPast="@Model.ShowPastMembers"
+                         class="btn btn-sm btn-label-secondary">
+                        Clear Date
+                      </a>
+                    }
+                  </form>
+                </div>
+
+                <!-- Past Members Toggle & Assign Button -->
+                <div class="col-lg-6 col-12 d-flex justify-content-lg-end align-items-center flex-wrap gap-2">
+                  @if (Model.ShowPastMembers)
+                  {
+                    <a asp-action="Details" asp-route-id="@Model.Project.Id" asp-route-tab="team" asp-route-showPast="false"
+                       asp-route-asOfDate="@(Model.PointInTimeDate?.ToString("yyyy-MM-dd"))"
+                       class="btn btn-sm btn-secondary">
+                      <i class="bx bx-hide me-1"></i> Hide Past Members (@Model.PastMembers.Count)
+                    </a>
+                  }
+                  else
+                  {
+                    <a asp-action="Details" asp-route-id="@Model.Project.Id" asp-route-tab="team" asp-route-showPast="true"
+                       asp-route-asOfDate="@(Model.PointInTimeDate?.ToString("yyyy-MM-dd"))"
+                       class="btn btn-sm btn-outline-secondary">
+                      <i class="bx bx-history me-1"></i> Show Past Members (@Model.PastMembers.Count)
+                    </a>
+                  }
+
+                  @if (Model.CanManageTeam)
+                  {
+                    @if (Model.RequiresAdminOverrideForAssign && !Model.IsAdmin)
+                    {
+                      <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip"
+                            title="Assigning members to Completed, Cancelled, or Archived projects requires an Administrator override.">
+                        <button type="button" class="btn btn-sm btn-primary" disabled>
+                          <i class="bx bx-user-plus me-1"></i> Assign Team Members
+                        </button>
+                      </span>
+                    }
+                    else
+                    {
+                      <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignTeamModal">
+                        <i class="bx bx-user-plus me-1"></i> Assign Team Members
+                      </button>
+                    }
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Point-in-Time Snapshot Card (if requested) -->
+          @if (Model.PointInTimeDate.HasValue && Model.PointInTimeTeam != null)
+          {
+            <div class="card border border-primary shadow-sm mb-4">
+              <div class="card-header bg-label-primary d-flex justify-content-between align-items-center py-3">
+                <div>
+                  <h6 class="mb-0 fw-bold text-primary">
+                    <i class="bx bx-time-five me-1"></i> Historical Team Snapshot as of @Model.PointInTimeDate.Value.ToString("MMMM dd, yyyy")
+                  </h6>
+                  <small class="text-muted">
+                    Rule applied: <code>start_date &lt;= @Model.PointInTimeDate.Value.ToString("yyyy-MM-dd") AND (end_date IS NULL OR end_date &gt; @Model.PointInTimeDate.Value.ToString("yyyy-MM-dd"))</code>
+                  </small>
+                </div>
+                <span class="badge bg-primary">@Model.PointInTimeTeam.Count Active Member(s) on Date</span>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive text-nowrap">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Team Member</th>
+                        <th>Department</th>
+                        <th>Role on Project</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @if (Model.PointInTimeTeam.Count == 0)
+                      {
+                        <tr>
+                          <td colspan="5" class="text-center py-4 text-muted">
+                            No employees were actively assigned to this project on <strong>@Model.PointInTimeDate.Value.ToString("MMM dd, yyyy")</strong>.
+                          </td>
+                        </tr>
+                      }
+                      else
+                      {
+                        @foreach (var member in Model.PointInTimeTeam)
+                        {
+                          <tr>
+                            <td>
+                              <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-2">
+                                  <span class="avatar-initial rounded-circle bg-label-info fw-bold">
+                                    @(member.User.Name.Length > 0 ? member.User.Name[0].ToString().ToUpper() : "U")
+                                  </span>
+                                </div>
+                                <div>
+                                  @if (Model.CanViewEmployeeProfiles || Model.CurrentUserId == member.UserId)
+                                  {
+                                    <a asp-controller="Employees" asp-action="Details" asp-route-id="@member.UserId" class="fw-semibold text-body">
+                                      @member.User.Name
+                                    </a>
+                                  }
+                                  else
+                                  {
+                                    <span class="fw-semibold">@member.User.Name</span>
+                                  }
+                                  @if (!member.User.IsActive)
+                                  {
+                                    <span class="badge bg-label-secondary font-size-xs ms-1">Inactive Account</span>
+                                  }
+                                  <small class="text-muted d-block">@member.User.Email</small>
+                                </div>
+                              </div>
+                            </td>
+                            <td>@member.User.Department</td>
+                            <td>
+                              <span class="badge bg-label-primary">@member.RoleOnProject.Name</span>
+                              @if (member.UserId == Model.Project.LeadId)
+                              {
+                                <span class="badge bg-label-warning ms-1"><i class="bx bx-crown me-1"></i>Project Lead</span>
+                              }
+                            </td>
+                            <td>@member.StartDate.ToString("MMM dd, yyyy")</td>
+                            <td>@(member.EndDate.HasValue ? member.EndDate.Value.ToString("MMM dd, yyyy") : "Present (Active)")</td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Current Active Team Roster Card -->
+          <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+              <div>
+                <h6 class="mb-0 fw-bold">Current Project Team</h6>
+                <small class="text-muted">Active project members currently allocated to @Model.Project.Code.</small>
+              </div>
+              <span class="badge bg-label-primary">@Model.CurrentTeam.Count Active Member(s)</span>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive text-nowrap">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Employee</th>
+                      <th>Department</th>
+                      <th>Role on Project</th>
+                      <th>Assigned Since</th>
+                      @if (Model.CanManageTeam)
+                      {
+                        <th class="text-end">Actions</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @if (Model.CurrentTeam.Count == 0)
+                    {
+                      <tr>
+                        <td colspan="@(Model.CanManageTeam ? 5 : 4)" class="text-center py-5 text-muted">
+                          <i class="bx bx-group fs-1 d-block mb-2 text-secondary"></i>
+                          <span class="d-block fw-semibold">No active team members assigned yet.</span>
+                          @if (Model.CanManageTeam && (!Model.RequiresAdminOverrideForAssign || Model.IsAdmin))
+                          {
+                            <button type="button" class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#assignTeamModal">
+                              <i class="bx bx-user-plus me-1"></i> Assign First Team Member
+                            </button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                    else
+                    {
+                      @foreach (var assignment in Model.CurrentTeam)
+                      {
+                        var isProjectLead = assignment.UserId == Model.Project.LeadId;
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <div class="avatar avatar-sm me-3">
+                                <span class="avatar-initial rounded-circle @(isProjectLead ? "bg-label-primary" : "bg-label-info") fw-bold">
+                                  @(assignment.User.Name.Length > 0 ? assignment.User.Name[0].ToString().ToUpper() : "U")
+                                </span>
+                              </div>
+                              <div>
+                                @if (Model.CanViewEmployeeProfiles || Model.CurrentUserId == assignment.UserId)
+                                {
+                                  <a asp-controller="Employees" asp-action="Details" asp-route-id="@assignment.UserId" class="fw-semibold text-body">
+                                    @assignment.User.Name
+                                  </a>
+                                }
+                                else
+                                {
+                                  <span class="fw-semibold">@assignment.User.Name</span>
+                                }
+                                @if (!assignment.User.IsActive)
+                                {
+                                  <span class="badge bg-label-secondary font-size-xs ms-1">Inactive</span>
+                                }
+                                <small class="text-muted d-block">@assignment.User.Email</small>
+                              </div>
+                            </div>
+                          </td>
+                          <td>@assignment.User.Department</td>
+                          <td>
+                            <span class="badge @(assignment.RoleOnProject.Name == "Lead" ? "bg-primary" : "bg-label-primary")">
+                              @assignment.RoleOnProject.Name
+                            </span>
+                            @if (isProjectLead)
+                            {
+                              <span class="badge bg-label-warning ms-1">
+                                <i class="bx bx-crown me-1"></i>Project Lead
+                              </span>
+                            }
+                          </td>
+                          <td>
+                            <span class="fw-semibold">@assignment.StartDate.ToString("MMM dd, yyyy")</span>
+                          </td>
+                          @if (Model.CanManageTeam)
+                          {
+                            <td class="text-end">
+                              @if (isProjectLead)
+                              {
+                                <span class="text-muted small fst-italic" data-bs-toggle="tooltip"
+                                      title="The current Project Lead cannot be removed until a new Project Lead is chosen in Edit Project.">
+                                  <i class="bx bx-lock-alt me-1"></i>Lead Protected
+                                </span>
+                              }
+                              else
+                              {
+                                <div class="d-inline-flex gap-1">
+                                  <button type="button"
+                                          class="btn btn-sm btn-outline-primary"
+                                          data-bs-toggle="modal"
+                                          data-bs-target="#changeRoleModal"
+                                          data-assignment-id="@assignment.Id"
+                                          data-user-name="@assignment.User.Name"
+                                          data-current-role-id="@assignment.RoleOnProjectId">
+                                    <i class="bx bx-Customize me-1"></i> Role
+                                  </button>
+                                  <button type="button"
+                                          class="btn btn-sm btn-outline-danger"
+                                          data-bs-toggle="modal"
+                                          data-bs-target="#removeMemberModal"
+                                          data-assignment-id="@assignment.Id"
+                                          data-user-name="@assignment.User.Name"
+                                          data-start-date="@assignment.StartDate.ToString("yyyy-MM-dd")">
+                                    <i class="bx bx-user-minus me-1"></i> Remove
+                                  </button>
+                                </div>
+                              }
+                            </td>
+                          }
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Past Team Members Table (shown when toggled) -->
+          @if (Model.ShowPastMembers)
+          {
+            <div class="card shadow-sm border-0 mb-4">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+                <div>
+                  <h6 class="mb-0 fw-bold text-secondary">
+                    <i class="bx bx-history me-1"></i> Past Team Members (Historical Roster)
+                  </h6>
+                  <small class="text-muted">All past assignments are preserved permanently for audit and point-in-time reporting.</small>
+                </div>
+                <span class="badge bg-label-secondary">@Model.PastMembers.Count Historical Record(s)</span>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive text-nowrap">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Role Held</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Reason / Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @if (Model.PastMembers.Count == 0)
+                      {
+                        <tr>
+                          <td colspan="6" class="text-center py-4 text-muted small">
+                            No past team member records exist for this project yet.
+                          </td>
+                        </tr>
+                      }
+                      else
+                      {
+                        @foreach (var past in Model.PastMembers)
+                        {
+                          <tr>
+                            <td>
+                              <div class="d-flex align-items-center">
+                                <div class="avatar avatar-sm me-3">
+                                  <span class="avatar-initial rounded-circle bg-label-secondary fw-bold">
+                                    @(past.User.Name.Length > 0 ? past.User.Name[0].ToString().ToUpper() : "U")
+                                  </span>
+                                </div>
+                                <div>
+                                  @if (Model.CanViewEmployeeProfiles || Model.CurrentUserId == past.UserId)
+                                  {
+                                    <a asp-controller="Employees" asp-action="Details" asp-route-id="@past.UserId" class="fw-semibold text-body">
+                                      @past.User.Name
+                                    </a>
+                                  }
+                                  else
+                                  {
+                                    <span class="fw-semibold">@past.User.Name</span>
+                                  }
+                                  @if (!past.User.IsActive)
+                                  {
+                                    <span class="badge bg-label-secondary font-size-xs ms-1">Inactive</span>
+                                  }
+                                  <small class="text-muted d-block">@past.User.Email</small>
+                                </div>
+                              </div>
+                            </td>
+                            <td>@past.User.Department</td>
+                            <td><span class="badge bg-label-secondary">@past.RoleOnProject.Name</span></td>
+                            <td>@past.StartDate.ToString("MMM dd, yyyy")</td>
+                            <td>
+                              <span class="fw-semibold text-secondary">
+                                @(past.EndDate.HasValue ? past.EndDate.Value.ToString("MMM dd, yyyy") : "-")
+                              </span>
+                            </td>
+                            <td class="small text-muted">
+                              @(string.IsNullOrWhiteSpace(past.RemovalReason) ? "Assignment concluded" : past.RemovalReason)
+                            </td>
+                          </tr>
+                        }
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<!-- Assign Team Members Modal -->
+@if (Model.CanManageTeam && (!Model.RequiresAdminOverrideForAssign || Model.IsAdmin))
+{
+  <div class="modal fade" id="assignTeamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form asp-action="AssignTeamMembers" method="post">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="ProjectId" value="@Model.Project.Id" />
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <h5 class="modal-title fw-bold">Assign Team Members to @Model.Project.Code</h5>
+              <p class="text-muted small mb-0">Assign one or more active employees with their project role and start date.</p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            @if (Model.RequiresAdminOverrideForAssign)
+            {
+              <div class="alert alert-warning mb-3">
+                <div class="fw-bold mb-1">
+                  <i class="bx bx-shield-quarter me-1"></i> Administrator Override Required
+                </div>
+                <p class="small mb-2">
+                  This project is currently <strong>@(Model.Project.IsArchived ? "Archived" : Model.Project.Status.ToString())</strong>.
+                  Please provide an audit reason for assigning members to this project:
+                </p>
+                <input type="text" name="AdminOverrideReason" class="form-control form-control-sm"
+                       placeholder="Enter mandatory override reason (min 5 characters)..." required minlength="5" />
+              </div>
+            }
+
+            @if (Model.AvailableEmployees.Count == 0)
+            {
+              <div class="alert alert-info mb-0">
+                All active employees are already assigned to this project.
+              </div>
+            }
+            else
+            {
+              <div id="assignmentRowsContainer">
+                <div class="row g-2 align-items-end mb-2 assignment-row">
+                  <div class="col-md-5 col-12">
+                    <label class="form-label small fw-semibold">Employee <span class="text-danger">*</span></label>
+                    <select name="UserIds" class="form-select form-select-sm" required>
+                      <option value="">-- Select Active Employee --</option>
+                      @foreach (var emp in Model.AvailableEmployees)
+                      {
+                        <option value="@emp.Value">@emp.Text</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="col-md-4 col-6">
+                    <label class="form-label small fw-semibold">Role on Project <span class="text-danger">*</span></label>
+                    <select name="RoleOnProjectIds" class="form-select form-select-sm" required>
+                      @foreach (var role in Model.ActiveProjectRoles)
+                      {
+                        <option value="@role.Value" selected="@(role.Text == "Developer")">@role.Text</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="col-md-3 col-6">
+                    <label class="form-label small fw-semibold">Start Date <span class="text-danger">*</span></label>
+                    <div class="d-flex gap-1">
+                      <input type="date" name="StartDates" class="form-control form-control-sm"
+                             value="@today.ToString("yyyy-MM-dd")" required />
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-row-btn d-none" title="Remove row">
+                        <i class="bx bx-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-2">
+                <button type="button" id="addMoreMemberRowBtn" class="btn btn-sm btn-outline-secondary">
+                  <i class="bx bx-plus me-1"></i> Add Another Employee Row
+                </button>
+              </div>
+            }
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            @if (Model.AvailableEmployees.Count > 0)
+            {
+              <button type="submit" class="btn btn-primary">
+                <i class="bx bx-check me-1"></i> Confirm Assignment
+              </button>
+            }
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remove Member Modal -->
+  <div class="modal fade" id="removeMemberModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form asp-action="RemoveTeamMember" method="post">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="ProjectId" value="@Model.Project.Id" />
+          <input type="hidden" name="AssignmentId" id="removeAssignmentIdInput" />
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold">Remove Member from Project Team</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-2">
+              You are ending the active assignment of <strong id="removeMemberNameSpan"></strong> on
+              <strong>@Model.Project.Code</strong>.
+            </p>
+            <p class="text-muted small mb-3">
+              Past membership history is permanently preserved under <em>Past Team Members</em>.
+            </p>
+            <div class="mb-3">
+              <label for="removeEffectiveDateInput" class="form-label fw-semibold small">
+                Effective End Date <span class="text-danger">*</span>
+              </label>
+              <input type="date" id="removeEffectiveDateInput" name="EffectiveEndDate"
+                     class="form-control" value="@today.ToString("yyyy-MM-dd")" required />
+              <small class="text-muted font-size-xs">Must not be earlier than the member's assignment start date (<span id="removeMemberStartDateSpan"></span>).</small>
+            </div>
+            <div class="mb-0">
+              <label for="removeReasonInput" class="form-label fw-semibold small">Reason / Notes (Optional)</label>
+              <textarea id="removeReasonInput" name="Reason" class="form-control" rows="2"
+                        placeholder="e.g., Completed sprint deliverable, rotating off project..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-danger">Confirm Removal</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Role Modal -->
+  <div class="modal fade" id="changeRoleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form asp-action="ChangeTeamMemberRole" method="post">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="ProjectId" value="@Model.Project.Id" />
+          <input type="hidden" name="AssignmentId" id="changeRoleAssignmentIdInput" />
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold">Update Role on Project</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-3">
+              Select the updated project role for <strong id="changeRoleMemberNameSpan"></strong>:
+            </p>
+            <div>
+              <label for="newRoleSelect" class="form-label fw-semibold small">Role on Project</label>
+              <select id="newRoleSelect" name="NewRoleOnProjectId" class="form-select" required>
+                @foreach (var role in Model.ActiveProjectRoles)
+                {
+                  <option value="@role.Value">@role.Text</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Role</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Archive Modal -->
 @if (Model.CanArchive && !Model.Project.IsArchived)
@@ -354,4 +917,68 @@
       </div>
     </div>
   </div>
+}
+
+@section PageScripts {
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Multi-row assignment builder
+      const addRowBtn = document.getElementById('addMoreMemberRowBtn');
+      const container = document.getElementById('assignmentRowsContainer');
+
+      if (addRowBtn && container) {
+        addRowBtn.addEventListener('click', function () {
+          const firstRow = container.querySelector('.assignment-row');
+          if (!firstRow) return;
+
+          const clone = firstRow.cloneNode(true);
+          const empSelect = clone.querySelector('select[name="UserIds"]');
+          if (empSelect) empSelect.value = '';
+
+          const removeBtn = clone.querySelector('.remove-row-btn');
+          if (removeBtn) {
+            removeBtn.classList.remove('d-none');
+            removeBtn.addEventListener('click', function () {
+              clone.remove();
+            });
+          }
+
+          container.appendChild(clone);
+        });
+      }
+
+      // Remove member modal wiring
+      const removeModal = document.getElementById('removeMemberModal');
+      if (removeModal) {
+        removeModal.addEventListener('show.bs.modal', function (event) {
+          const btn = event.relatedTarget;
+          if (!btn) return;
+          document.getElementById('removeAssignmentIdInput').value = btn.getAttribute('data-assignment-id');
+          document.getElementById('removeMemberNameSpan').textContent = btn.getAttribute('data-user-name');
+          const startDate = btn.getAttribute('data-start-date');
+          document.getElementById('removeMemberStartDateSpan').textContent = startDate;
+          const endDateInput = document.getElementById('removeEffectiveDateInput');
+          if (endDateInput && startDate) {
+            endDateInput.min = startDate;
+          }
+        });
+      }
+
+      // Change role modal wiring
+      const changeRoleModal = document.getElementById('changeRoleModal');
+      if (changeRoleModal) {
+        changeRoleModal.addEventListener('show.bs.modal', function (event) {
+          const btn = event.relatedTarget;
+          if (!btn) return;
+          document.getElementById('changeRoleAssignmentIdInput').value = btn.getAttribute('data-assignment-id');
+          document.getElementById('changeRoleMemberNameSpan').textContent = btn.getAttribute('data-user-name');
+          const currentRoleId = btn.getAttribute('data-current-role-id');
+          const roleSelect = document.getElementById('newRoleSelect');
+          if (roleSelect && currentRoleId) {
+            roleSelect.value = currentRoleId;
+          }
+        });
+      }
+    });
+  </script>
 }

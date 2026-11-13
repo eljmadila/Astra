@@ -49,6 +49,7 @@ public class Project
 
     // Navigation properties
     public ICollection<ProjectClient> ProjectClients { get; set; } = new List<ProjectClient>();
+    public ICollection<ProjectAssignment> ProjectAssignments { get; set; } = new List<ProjectAssignment>();
 
     // Derived helpers (computed in memory, not stored in DB)
     [NotMapped]

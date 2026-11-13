@@ -99,10 +99,15 @@ public static class DbInitializer
             // 3. Seed Standard Role Test Users (Manager, Employee, Viewer)
             var testUsers = new[]
             {
-                new { Email = "manager@astra.internal", Password = "Manager@Astra2026!", Name = "David Miller", Dept = "Engineering Operations", Role = "Manager" },
-                new { Email = "sarah.manager@astra.internal", Password = "Manager@Astra2026!", Name = "Sarah Jenkins", Dept = "Enterprise Delivery", Role = "Manager" },
-                new { Email = "employee@astra.internal", Password = "Employee@Astra2026!", Name = "Alex Rivera", Dept = "Core Development", Role = "Employee" },
-                new { Email = "viewer@astra.internal", Password = "Viewer@Astra2026!", Name = "Rachel Zane", Dept = "Auditing & Compliance", Role = "Viewer" }
+                new { Email = "manager@astra.internal", Password = "Manager@Astra2026!", Name = "David Miller", Dept = "Engineering Operations", Role = "Manager", IsActive = true },
+                new { Email = "sarah.manager@astra.internal", Password = "Manager@Astra2026!", Name = "Sarah Jenkins", Dept = "Enterprise Delivery", Role = "Manager", IsActive = true },
+                new { Email = "employee@astra.internal", Password = "Employee@Astra2026!", Name = "Alex Rivera", Dept = "Core Development", Role = "Employee", IsActive = true },
+                new { Email = "elena.karanja@astra.internal", Password = "Employee@Astra2026!", Name = "Elena Karanja", Dept = "Cloud & Infrastructure", Role = "Employee", IsActive = true },
+                new { Email = "marcus.vance@astra.internal", Password = "Employee@Astra2026!", Name = "Marcus Vance", Dept = "Quality Assurance", Role = "Employee", IsActive = true },
+                new { Email = "priya.patel@astra.internal", Password = "Employee@Astra2026!", Name = "Priya Patel", Dept = "Product Design & UX", Role = "Employee", IsActive = true },
+                new { Email = "daniel.ochieng@astra.internal", Password = "Employee@Astra2026!", Name = "Daniel Ochieng", Dept = "Data & Analytics", Role = "Employee", IsActive = true },
+                new { Email = "thomas.wright@astra.internal", Password = "Employee@Astra2026!", Name = "Thomas Wright", Dept = "Legacy Systems", Role = "Employee", IsActive = false },
+                new { Email = "viewer@astra.internal", Password = "Viewer@Astra2026!", Name = "Rachel Zane", Dept = "Auditing & Compliance", Role = "Viewer", IsActive = true }
             };
 
             foreach (var userSpec in testUsers)
@@ -117,7 +122,7 @@ public static class DbInitializer
                         Name = userSpec.Name,
                         Department = userSpec.Dept,
                         EmailConfirmed = true,
-                        IsActive = true,
+                        IsActive = userSpec.IsActive,
                         MustChangePassword = false,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -373,6 +378,206 @@ public static class DbInitializer
                 await context.SaveChangesAsync();
 
                 logger.LogInformation("Seeded 7 initial projects with client linkages.");
+            }
+
+            // 7. Seed Project Assignments (Week 3: Current & Historical Team Roster)
+            if (!await context.ProjectAssignments.AnyAsync())
+            {
+                var projects = await context.Projects.OrderBy(p => p.Code).ToListAsync();
+                var roles = await context.ProjectRoles.ToDictionaryAsync(r => r.Name, r => r.Id);
+
+                var adminUser = await userManager.FindByEmailAsync("admin@astra.internal");
+                var davidManager = await userManager.FindByEmailAsync("manager@astra.internal");
+                var sarahManager = await userManager.FindByEmailAsync("sarah.manager@astra.internal");
+                var alexEmp = await userManager.FindByEmailAsync("employee@astra.internal");
+                var elenaEmp = await userManager.FindByEmailAsync("elena.karanja@astra.internal");
+                var marcusEmp = await userManager.FindByEmailAsync("marcus.vance@astra.internal");
+                var priyaEmp = await userManager.FindByEmailAsync("priya.patel@astra.internal");
+                var danielEmp = await userManager.FindByEmailAsync("daniel.ochieng@astra.internal");
+                var thomasInactive = await userManager.FindByEmailAsync("thomas.wright@astra.internal");
+
+                var today = DateOnly.FromDateTime(DateTime.UtcNow);
+                var seedAssignments = new List<ProjectAssignment>();
+
+                // Ensure every project has its Lead on the team in the Lead role
+                foreach (var proj in projects)
+                {
+                    var isClosedProject = proj.Status is ProjectStatus.Completed or ProjectStatus.Cancelled;
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = proj.Id,
+                        UserId = proj.LeadId,
+                        RoleOnProjectId = roles["Lead"],
+                        StartDate = proj.StartDate,
+                        EndDate = isClosedProject ? proj.ActualEndDate : null,
+                        RemovalReason = isClosedProject ? $"Project {proj.Status}" : null,
+                        CreatedById = proj.CreatedById,
+                        CreatedAt = proj.CreatedAt
+                    });
+                }
+
+                var p1 = projects.FirstOrDefault(p => p.Code == "PRJ-2026-001");
+                var p2 = projects.FirstOrDefault(p => p.Code == "PRJ-2026-002");
+                var p3 = projects.FirstOrDefault(p => p.Code == "PRJ-2026-003");
+                var p4 = projects.FirstOrDefault(p => p.Code == "PRJ-2026-004");
+                var p5 = projects.FirstOrDefault(p => p.Code == "PRJ-2026-005");
+
+                if (p1 != null && alexEmp != null && elenaEmp != null && marcusEmp != null && thomasInactive != null)
+                {
+                    // Alex Rivera: had an earlier Analyst stint on PRJ-2026-001, then re-added as Developer
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p1.Id,
+                        UserId = alexEmp.Id,
+                        RoleOnProjectId = roles["Analyst"],
+                        StartDate = p1.StartDate,
+                        EndDate = p1.StartDate.AddDays(20),
+                        RemovalReason = "Completed initial architecture discovery phase",
+                        CreatedById = p1.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-2)
+                    });
+
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p1.Id,
+                        UserId = alexEmp.Id,
+                        RoleOnProjectId = roles["Developer"],
+                        StartDate = p1.StartDate.AddDays(25),
+                        EndDate = null,
+                        CreatedById = p1.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-1)
+                    });
+
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p1.Id,
+                        UserId = elenaEmp.Id,
+                        RoleOnProjectId = roles["Developer"],
+                        StartDate = p1.StartDate.AddDays(3),
+                        EndDate = null,
+                        CreatedById = p1.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-2)
+                    });
+
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p1.Id,
+                        UserId = marcusEmp.Id,
+                        RoleOnProjectId = roles["Tester"],
+                        StartDate = p1.StartDate.AddDays(14),
+                        EndDate = null,
+                        CreatedById = p1.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-1)
+                    });
+
+                    // Deactivated user with historical assignment
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p1.Id,
+                        UserId = thomasInactive.Id,
+                        RoleOnProjectId = roles["Support"],
+                        StartDate = p1.StartDate,
+                        EndDate = p1.StartDate.AddDays(30),
+                        RemovalReason = "Transitioned off project prior to account deactivation",
+                        CreatedById = p1.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-2)
+                    });
+                }
+
+                if (p2 != null && alexEmp != null && priyaEmp != null && danielEmp != null)
+                {
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p2.Id,
+                        UserId = alexEmp.Id,
+                        RoleOnProjectId = roles["Developer"],
+                        StartDate = p2.StartDate,
+                        EndDate = null,
+                        CreatedById = p2.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-1)
+                    });
+
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p2.Id,
+                        UserId = priyaEmp.Id,
+                        RoleOnProjectId = roles["Designer"],
+                        StartDate = p2.StartDate,
+                        EndDate = null,
+                        CreatedById = p2.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-1)
+                    });
+
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p2.Id,
+                        UserId = danielEmp.Id,
+                        RoleOnProjectId = roles["Analyst"],
+                        StartDate = p2.StartDate,
+                        EndDate = today.AddDays(-5),
+                        RemovalReason = "Completed HIPAA data mapping deliverable",
+                        CreatedById = p2.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-1)
+                    });
+                }
+
+                if (p3 != null && priyaEmp != null && danielEmp != null)
+                {
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p3.Id,
+                        UserId = danielEmp.Id,
+                        RoleOnProjectId = roles["Analyst"],
+                        StartDate = p3.StartDate,
+                        EndDate = null,
+                        CreatedById = p3.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddDays(-2)
+                    });
+                }
+
+                if (p4 != null && elenaEmp != null && marcusEmp != null)
+                {
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p4.Id,
+                        UserId = elenaEmp.Id,
+                        RoleOnProjectId = roles["Developer"],
+                        StartDate = p4.StartDate.AddDays(5),
+                        EndDate = null,
+                        CreatedById = p4.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-3)
+                    });
+
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p4.Id,
+                        UserId = marcusEmp.Id,
+                        RoleOnProjectId = roles["Tester"],
+                        StartDate = p4.StartDate.AddDays(15),
+                        EndDate = null,
+                        CreatedById = p4.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-2)
+                    });
+                }
+
+                if (p5 != null && alexEmp != null && thomasInactive != null)
+                {
+                    seedAssignments.Add(new ProjectAssignment
+                    {
+                        ProjectId = p5.Id,
+                        UserId = alexEmp.Id,
+                        RoleOnProjectId = roles["Developer"],
+                        StartDate = p5.StartDate,
+                        EndDate = p5.ActualEndDate ?? today.AddMonths(-1),
+                        RemovalReason = "Project completed",
+                        CreatedById = p5.LeadId,
+                        CreatedAt = DateTime.UtcNow.AddMonths(-4)
+                    });
+                }
+
+                context.ProjectAssignments.AddRange(seedAssignments);
+                await context.SaveChangesAsync();
+                logger.LogInformation("Seeded {Count} current and historical project team assignments.", seedAssignments.Count);
             }
         }
         catch (Exception ex)

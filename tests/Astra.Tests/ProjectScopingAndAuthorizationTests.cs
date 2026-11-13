@@ -77,18 +77,45 @@ public class ProjectScopingAndAuthorizationTests
     }
 
     [Fact]
-    public void ScopeProjects_ForEmployee_FiltersOutUnassignedProjects()
+    public void ScopeProjects_ForEmployee_FiltersOutUnassignedProjects_AndIncludesAssignedProjects()
     {
         var employeePrincipal = CreatePrincipal(20, "Employee");
         var projects = new List<Project>
         {
-            new() { Id = 1, LeadId = 20, Code = "PRJ-01", Name = "Assigned" },
-            new() { Id = 2, LeadId = 99, Code = "PRJ-02", Name = "Not Assigned" }
+            new() { Id = 1, LeadId = 20, Code = "PRJ-01", Name = "Led By Employee" },
+            new()
+            {
+                Id = 2,
+                LeadId = 99,
+                Code = "PRJ-02",
+                Name = "Assigned To Employee",
+                ProjectAssignments = [new ProjectAssignment { ProjectId = 2, UserId = 20, StartDate = new DateOnly(2026, 1, 1) }]
+            },
+            new() { Id = 3, LeadId = 99, Code = "PRJ-03", Name = "Not Assigned" }
         }.AsQueryable();
 
         var scoped = _scopingService.ScopeProjects(projects, employeePrincipal).ToList();
 
-        Assert.Single(scoped);
-        Assert.Equal("PRJ-01", scoped[0].Code);
+        Assert.Equal(2, scoped.Count);
+        Assert.Contains(scoped, p => p.Code == "PRJ-01");
+        Assert.Contains(scoped, p => p.Code == "PRJ-02");
+    }
+
+    [Fact]
+    public void EmployeeProfileScoping_EmployeeSeesOwnOnly_StaffSeesAll()
+    {
+        var employeePrincipal = CreatePrincipal(20, "Employee");
+        var managerPrincipal = CreatePrincipal(5, "Manager");
+        var adminPrincipal = CreatePrincipal(1, "Admin");
+        var viewerPrincipal = CreatePrincipal(30, "Viewer");
+
+        // Employee can view own profile (20), but receives false (404 IDOR defense) for another employee (21)
+        Assert.True(_scopingService.CanUserViewEmployeeProfile(20, employeePrincipal));
+        Assert.False(_scopingService.CanUserViewEmployeeProfile(21, employeePrincipal));
+
+        // Admin, Manager, and Viewer can view any profile
+        Assert.True(_scopingService.CanUserViewEmployeeProfile(21, adminPrincipal));
+        Assert.True(_scopingService.CanUserViewEmployeeProfile(21, managerPrincipal));
+        Assert.True(_scopingService.CanUserViewEmployeeProfile(21, viewerPrincipal));
     }
 }
