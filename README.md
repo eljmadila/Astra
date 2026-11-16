@@ -75,7 +75,3 @@
 * **Audit Immutability**: Application database login granted `INSERT` and `SELECT` permissions only on `audit_logs`, backed by database prevention triggers.
 * **Protection**: Parameterized queries (SQLi prevention), Razor HTML auto-encoding (XSS mitigation), open-redirect defenses, and identity lockout after 5 failed attempts.
 
----
-
-## 📄 License
-This project is licensed under the MIT License.
